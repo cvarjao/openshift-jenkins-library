@@ -1,3 +1,5 @@
+import import org.kohsuke.github.*;
+
 def call(String environmentName = 'PREVIEW') {
   def gitRepoUrl = scm.getUserRemoteConfigs()[0].getUrl()
   def gitRepoFullName=gitRepoUrl.replace('https://github.com/', '').replace('.git', '')
@@ -7,5 +9,6 @@ def call(String environmentName = 'PREVIEW') {
       def ghRepo=github.getRepository(gitRepoFullName);
       def ghDeploymentResponse=ghRepo.createDeployment(gitCommitId).environment(environmentName).description("Preview deployment").requiredContexts([]).create();
       ghDeploymentResponse.createStatus(GHDeploymentState.SUCCESS).targetUrl("http://somewhere.here.com").description("Preview deplyment2").create();
+      ghDeploymentResponse = null;
   }
 }
