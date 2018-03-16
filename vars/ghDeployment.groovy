@@ -1,7 +1,7 @@
 import org.kohsuke.github.*;
 
 //@NonCPS
-def call(String environmentName = 'PREVIEW') {
+def call(String gitCommitId, String environmentName = 'PREVIEW') {
   def gitRepoUrl = scm.getUserRemoteConfigs()[0].getUrl()
   def gitRepoFullName=gitRepoUrl.replace('https://github.com/', '').replace('.git', '')
   echo "gitRepoFullName='${gitRepoFullName}'"
