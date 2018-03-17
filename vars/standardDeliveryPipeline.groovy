@@ -10,6 +10,46 @@ import hudson.model.Result;
 import jenkins.model.CauseOfInterruption.UserInterruption;
 import org.kohsuke.github.*;
 
+
+def killOldBuilds() {
+    while(currentBuild.rawBuild.getPreviousBuildInProgress() != null) {
+        currentBuild.rawBuild.getPreviousBuildInProgress().doKill()
+    }
+}
+
+def updateContainerImages(containers, triggers) {
+    for ( c in containers ) {
+        for ( t in triggers) {
+            if ('ImageChange'.equalsIgnoreCase(t['type'])){
+                for ( cn in t.imageChangeParams.containerNames){
+                    if (cn.equalsIgnoreCase(c.name)){
+                        echo "${t.imageChangeParams.from}"
+                        def dockerImageReference = '';
+                        def selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
+
+                        if (t.imageChangeParams.from['namespace']!=null && t.imageChangeParams.from['namespace'].length()>0){
+                            openshift.withProject(t.imageChangeParams.from['namespace']) {
+                                selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
+                                if (selector.count() == 1 ){
+                                    dockerImageReference=selector.object().image.dockerImageReference
+                                }
+                            }
+                        }else{
+                            selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
+                            if (selector.count() == 1 ){
+                                dockerImageReference=selector.object().image.dockerImageReference
+                            }
+                        }
+
+                        echo "ImageReference is '${dockerImageReference}'"
+                        c.image = "${dockerImageReference}";
+                    }
+                }
+            }
+        }
+    }
+}
+
 def call(body) {
     def pipelineParams= [:]
     body.resolveStrategy = Closure.DELEGATE_FIRST
@@ -27,45 +67,6 @@ def call(body) {
     def resourceBuildNameSuffix = '-dev';
     def buildEnvName = 'dev'
     def gitRepoUrl= ''
-
-    def killOldBuilds() {
-        while(currentBuild.rawBuild.getPreviousBuildInProgress() != null) {
-            currentBuild.rawBuild.getPreviousBuildInProgress().doKill()
-        }
-    }
-
-    def updateContainerImages(containers, triggers) {
-        for ( c in containers ) {
-            for ( t in triggers) {
-                if ('ImageChange'.equalsIgnoreCase(t['type'])){
-                    for ( cn in t.imageChangeParams.containerNames){
-                        if (cn.equalsIgnoreCase(c.name)){
-                            echo "${t.imageChangeParams.from}"
-                            def dockerImageReference = '';
-                            def selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
-
-                            if (t.imageChangeParams.from['namespace']!=null && t.imageChangeParams.from['namespace'].length()>0){
-                                openshift.withProject(t.imageChangeParams.from['namespace']) {
-                                    selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
-                                    if (selector.count() == 1 ){
-                                        dockerImageReference=selector.object().image.dockerImageReference
-                                    }
-                                }
-                            }else{
-                                selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
-                                if (selector.count() == 1 ){
-                                    dockerImageReference=selector.object().image.dockerImageReference
-                                }
-                            }
-
-                            echo "ImageReference is '${dockerImageReference}'"
-                            c.image = "${dockerImageReference}";
-                        }
-                    }
-                }
-            }
-        }
-    }
 
 
 
