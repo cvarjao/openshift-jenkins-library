@@ -3,7 +3,7 @@
 * References:
 * - https://zwischenzugs.com/2017/04/23/things-i-wish-i-knew-before-using-jenkins-pipelines/
 * - https://jenkins.io/blog/2017/10/02/pipeline-templates-with-shared-libraries/
-*
+* - https://jenkins.io/doc/pipeline/examples/
 */
 
 import hudson.model.Result;
@@ -81,6 +81,14 @@ def call(body) {
         stages {
             stage('Prepare') {
                 agent any
+                when { expression { return false } }
+                steps {
+                    sh "env"
+                }
+            }
+            stage('Prepare') {
+                agent any
+                when { expression { return false} }
                 steps {
                     milestone(1)
                     script {
@@ -141,7 +149,7 @@ def call(body) {
             }
             stage('GitHub Deployment (Start)') {
                 agent any
-                when { expression { return true} }
+                when { expression { return false} }
                 steps {
                     script {
                         ghDeployment(gitCommitId, "PREVIEW")
@@ -356,7 +364,7 @@ def call(body) {
                     echo "Packaging ... Done!"
                 }
             }
-            stage('publishing') {
+            stage('Cleanup') {
                 agent any
                 when { expression { doDeploy == true} }
                 steps {
