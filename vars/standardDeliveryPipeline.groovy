@@ -80,12 +80,14 @@ def call(body) {
         agent none
         stages {
             stage('Prepare') {
-                agent any
+                agent { label 'master' }
                 when { expression { return true } }
                 steps {
-                    sh "env"
+                    milestone(1)
+                    checkout scm
                     script {
-                        echo scm.dump()
+                        def worskpaceDir=pwd()
+                        echo "workspaceDir:${worskpaceDir}"
                     }
                 }
             }
@@ -93,7 +95,6 @@ def call(body) {
                 agent any
                 when { expression { return false} }
                 steps {
-                    milestone(1)
                     script {
                         sayHello('World')
                         killOldBuilds();
