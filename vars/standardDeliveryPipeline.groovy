@@ -51,7 +51,8 @@ def updateContainerImages(containers, triggers) {
         }
     }
 }
-@NonCPS
+
+//@NonCPS
 def listModules(workspaceDir) {
     def modules=[:];
     for (def file:new File(workspaceDir).listFiles()){
