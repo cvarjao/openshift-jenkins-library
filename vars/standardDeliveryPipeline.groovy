@@ -55,7 +55,9 @@ def updateContainerImages(containers, triggers) {
 def listModules(workspaceDir) {
     def modules=[:];
     for (def file:new File(workspaceDir).listFiles()){
-        modules[file.name]=[:]
+        if (file.isDirectory() && !file.getName().startsWith('.')) {
+            modules[file.name] = [:]
+        }
     }
     return modules;
 }
