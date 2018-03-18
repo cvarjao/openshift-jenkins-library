@@ -84,6 +84,9 @@ def call(body) {
                 when { expression { return true } }
                 steps {
                     sh "env"
+                    script {
+                        echo scm.dump()
+                    }
                 }
             }
             stage('Checkout') {
