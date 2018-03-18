@@ -80,13 +80,13 @@ def call(body) {
         agent none
         stages {
             stage('Prepare') {
-                agent any
+                agent none
                 when { expression { return false } }
                 steps {
                     sh "env"
                 }
             }
-            stage('Prepare') {
+            stage('Checkout') {
                 agent any
                 when { expression { return false} }
                 steps {
