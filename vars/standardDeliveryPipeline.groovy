@@ -106,7 +106,7 @@ def call(body) {
                     checkout scm
                     script {
                         def modules=listModules(pwd())
-                        echo modules.dump()
+                        echo "${modules}"
                     }
                 }
             }
