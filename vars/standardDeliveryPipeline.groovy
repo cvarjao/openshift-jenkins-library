@@ -11,12 +11,14 @@ import jenkins.model.CauseOfInterruption.UserInterruption;
 import org.kohsuke.github.*;
 
 
+@NonCPS
 def killOldBuilds() {
     while(currentBuild.rawBuild.getPreviousBuildInProgress() != null) {
         currentBuild.rawBuild.getPreviousBuildInProgress().doKill()
     }
 }
 
+@NonCPS
 def updateContainerImages(containers, triggers) {
     for ( c in containers ) {
         for ( t in triggers) {
@@ -48,6 +50,14 @@ def updateContainerImages(containers, triggers) {
             }
         }
     }
+}
+@NonCPS
+def listModules(workspaceDir) {
+    def modules=[:];
+    for (def file:new File(workspaceDir).listFiles()){
+        modules[file.name]=[:]
+    }
+    return modules;
 }
 
 def call(body) {
@@ -86,8 +96,8 @@ def call(body) {
                     milestone(1)
                     checkout scm
                     script {
-                        def worskpaceDir=pwd()
-                        echo "workspaceDir:${worskpaceDir}"
+                        def modules=listModules(pwd())
+                        echo modules.dump()
                     }
                 }
             }
