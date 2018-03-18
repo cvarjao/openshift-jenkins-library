@@ -56,7 +56,11 @@ def listModules(workspaceDir) {
     def modules=[:];
     for (def file:new File(workspaceDir).listFiles()){
         if (file.isDirectory() && !file.getName().startsWith('.')) {
-            modules[file.name] = [:]
+            def module = ['name':file.getName()]
+
+            module['commit']=sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${file.name}'").trim()
+
+            modules[file.name] = module
         }
     }
     return modules;
