@@ -80,7 +80,7 @@ def call(body) {
         agent none
         stages {
             stage('Prepare') {
-                agent none
+                agent any
                 when { expression { return true } }
                 steps {
                     sh "env"
