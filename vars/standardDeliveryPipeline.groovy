@@ -54,7 +54,9 @@ def call(body) {
                 when { expression { return true} }
                 steps {
                     script {
-                        openShiftBuild(metadata);
+                        openShiftBuild(metadata, {
+                            models.add('something')
+                        });
                         
                         openshift.withCluster() {
                             //create or patch DCs
