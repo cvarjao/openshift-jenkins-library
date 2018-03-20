@@ -32,7 +32,7 @@ def updateContainerImages(_openshift, containers, triggers) {
     }
 }
 
-def call(_openshift, String appName, String envName, List models) {
+def call(_openshift, String appName, String envName, List models, buildImageStreams) {
     def dcSelector=['app-name':appName, 'env-name':envName];
     for ( m in models ) {
       if ("DeploymentConfig".equals(m.kind)){
