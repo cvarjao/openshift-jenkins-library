@@ -36,15 +36,6 @@ def call(body) {
 
     def metadata=['appName':'spring-petclinic'];
     
-    def appName='spring-petclinic'
-    def isPullRequest=false;
-    def pullRequestNumber=null;
-    def gitBranchRemoteRef=''
-    def buildBranchName = null;
-    def resourceBuildNameSuffix = '-dev';
-    def buildEnvName = 'dev'
-    def gitRepoUrl= ''
-
 
     pipeline {
         // The options directive is for configuration that applies to the whole job.
@@ -72,7 +63,7 @@ def call(body) {
                 when { expression { return false} }
                 steps {
                     script {
-                        ghDeployment(gitCommitId, "PREVIEW")
+                        ghDeployment(metadata.commit, "PREVIEW")
                     }
                 }
             }
@@ -110,31 +101,26 @@ def call(body) {
                 steps {
                     echo 'Deploying'
                     script {
-                        def dcPrefix=appName;
+                        def dcPrefix=metadata.appName;
                         def dcSuffix='-dev';
                         def envName="dev"
 
-                        if (isPullRequest){
+                        if (metadata.isPullRequest){
                             envName = "pr-${pullRequestNumber}"
                             dcSuffix="-pr-${pullRequestNumber}";
                         }
 
-                        def dcSelector=['app-name':appName, 'env-name':envName];
-
                         openshift.withCluster() {
                             def buildProjectName="${openshift.project()}"
                             def buildImageStreams=[:];
-                            openshift.selector( 'is', ['app-name':appName, 'env-name':buildEnvName]).withEach {
+                            openshift.selector( 'is', ['app-name':metadata.appName, 'env-name':metadata.buildEnvName]).withEach {
                                 buildImageStreams["${it.object().metadata.name}"]=true;
                             }
 
                             echo "buildImageStreams:${buildImageStreams}"
                             openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
                                 openshift.withProject( 'csnr-devops-lab-deploy' ) {
-                                    def whoamiResult = openshift.raw( 'whoami' )
                                     def models = [];
-                                    echo "WhoAmI:${whoamiResult.out}"
-
                                     models.addAll(openshift.process(
                                             'openshift//mysql-ephemeral',
                                             "-p", "DATABASE_SERVICE_NAME=${dcPrefix}-db${dcSuffix}",
