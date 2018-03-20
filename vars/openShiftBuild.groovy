@@ -11,6 +11,11 @@ def call(metadata, Closure body) {
   openshift.withCluster() {
     echo "project:${openshift.project()}"
     echo "models:${context.dump()}"
-    echo "models:${context.models()}"
+    if (context.models!=null){
+      context.models.resolveStrategy = Closure.DELEGATE_FIRST
+      context.models.delegate = this
+      echo "models:${context.models()}"
+    }
+    
   }
 }
