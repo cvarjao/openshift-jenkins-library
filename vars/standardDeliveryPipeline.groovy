@@ -201,7 +201,7 @@ def call(body) {
                             echo "gitAppCommitId:${gitAppCommitId}"
                             def builds=[];
                             
-                            builds.add(openShiftStartBuild(bcSelector, gitAppCommitId));
+                            builds.add(openShiftStartBuild(openshift, bcSelector, gitAppCommitId));
                             
                             //Wait for all builds to complete
                             openshift.selector(builds).watch {
