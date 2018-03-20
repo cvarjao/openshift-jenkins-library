@@ -126,22 +126,6 @@ def call(body) {
                         def bcSelector=['app-name':appName, 'env-name':buildEnvName];
 
                         openshift.withCluster() {
-                            echo "Waiting for all builds to complete/cancel"
-                            openshift.selector( 'bc', bcSelector).cancelBuild();
-
-                            openshift.selector( 'builds', bcSelector).watch {
-                                if ( it.count() == 0 ) return true
-                                def allDone = true
-                                it.withEach {
-                                    def buildModel = it.object()
-                                    //echo "${it.name()}:status.phase: ${it.object().status.phase}"
-                                    if ( it.object().status.phase != "Complete" &&  it.object().status.phase != "Failed") {
-                                        allDone = false
-                                    }
-                                }
-                                return allDone;
-                            }
-
                             //create or patch DCs
                             echo 'Processing Templates'
                             def models = openshift.process("-f", "openshift.bc.json",
@@ -175,8 +159,6 @@ def call(body) {
                         def dcPrefix=appName;
                         def dcSuffix='-dev';
                         def envName="dev"
-
-
 
                         if (isPullRequest){
                             envName = "pr-${pullRequestNumber}"
