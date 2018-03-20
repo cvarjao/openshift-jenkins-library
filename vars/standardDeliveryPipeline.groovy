@@ -195,30 +195,13 @@ def call(body) {
                             
                             echo 'Creating/Updating Objects (from template)'
                             openShiftApplyBuildConfig(openshift, appName, buildEnvName, models)
-                            openshift.apply(models)
                             
                             def gitAppCommitId = metadata.modules['spring-petclinic'].commit;
                             echo "gitAppCommitId:${gitAppCommitId}"
                             def builds=[];
                             
                             builds.add(openShiftStartBuild(openshift, bcSelector, gitAppCommitId));
-                            
-                            //Wait for all builds to complete
-                            openshift.selector(builds).watch {
-                                def build=it.object();
-                                def buildDone=("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
-                                if (!buildDone){
-                                    echo "Waiting for '${it.name()}' (${build.status.phase})"
-                                }
-                                return buildDone;
-                            }
-                            
-                            def build=openshift.selector(builds).withEach { build ->
-                                def bo = build.object(); // build object
-                                if (!"Complete".equalsIgnoreCase(bo.status.phase)){
-                                    error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
-                                }
-                            }
+                            openShiftWaitForBuilds(openshift, builds)
                             
                         }
 
