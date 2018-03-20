@@ -28,8 +28,8 @@ def call(metadata, Closure body) {
       }
 
       echo "buildImageStreams:${buildImageStreams}"
-      openshift.withCredentials( context.projectName ) {
-          openshift.withProject( 'csnr-devops-lab-deploy' ) {
+      openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
+          openshift.withProject( context.projectName ) {
           def models=[];
 
           if (context.models!=null){
