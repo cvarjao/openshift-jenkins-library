@@ -69,6 +69,7 @@ def listModules(workspaceDir) {
     return modules;
 }
 
+
 def call(body) {
     def pipelineParams= [:]
     body.resolveStrategy = Closure.DELEGATE_FIRST
@@ -86,8 +87,7 @@ def call(body) {
     def resourceBuildNameSuffix = '-dev';
     def buildEnvName = 'dev'
     def gitRepoUrl= ''
-
-
+    def metadata=["]
 
     pipeline {
         // The options directive is for configuration that applies to the whole job.
@@ -105,8 +105,8 @@ def call(body) {
                     milestone(1)
                     checkout scm
                     script {
-                        def modules=listModules(pwd())
-                        echo "${modules}"
+                        metadata.modules=listModules(pwd())
+                        echo "${metadata.modules}"
                     }
                 }
             }
@@ -181,7 +181,7 @@ def call(body) {
             }
             stage('Build') {
                 agent any
-                when { expression { return false} }
+                when { expression { return true} }
                 steps {
                     script {
                         def bcPrefix=appName;
@@ -221,54 +221,33 @@ def call(body) {
                                     "-p", "NAME_PREFIX=${bcPrefix}",
                                     "-p", "NAME_SUFFIX=${bcSuffix}",
                                     "-p", "GIT_REPO_URL=${gitRepoUrl}")
-                            echo "The template will create/update ${models.size()} objects"
-                            for ( o in models ) {
-                                o.metadata.labels[ "app" ] = "${appName}-${buildEnvName}"
-                                /*
-                                def sel=openshift.selector("${o.kind}/${o.metadata.name}");
-                                if (sel.count()==0){
-                                    echo "Creating '${o.kind}/${o.metadata.name}"
-                                    openshift.create([o]);
-                                }else{
-                                    echo "Patching '${o.kind}/${o.metadata.name}"
-                                    openshift.apply(o);
-                                }
-                                */
-
-                            }
-                            openshift.apply(models);
-
-                            def gitAppCommitId = sh(returnStdout: true, script: 'git rev-list -1 HEAD -- spring-petclinic').trim()
+                            
+                            openShiftApplyBuildConfig(appName, buildEnvName, models)
+                            
+                            
+                            def gitAppCommitId = metadata.modules['spring-petclinic'].commit;
                             echo "gitAppCommitId:${gitAppCommitId}"
-
-                            def buildSelector = openshift.selector( 'builds', bcSelector + ['commit-id':"${gitAppCommitId}"]);
-                            if (buildSelector.count()==0){
-                                echo "Starting new build"
-                                buildSelector = openshift.selector( 'bc', bcSelector).narrow('bc').startBuild("--commit=${buildRefBranchName}")
-                                echo "New build started - ${buildSelector.name()}"
-                                buildSelector.label(['commit-id':"${gitAppCommitId}"], "--overwrite")
-                                buildSelector.logs('-f');
-
-                                openshift.selector("${buildSelector.name()}").watch {
-                                    def build=it.object();
-                                    return !"Running".equalsIgnoreCase(build.status.phase)
+                            def builds=[];
+                            
+                            builds.add(openShiftStartBuild(bcSelector, gitAppCommitId));
+                            
+                            //Wait for all builds to complete
+                            openshift.selector(builds).watch {
+                                def build=it.object();
+                                def buildDone=!"Running".equalsIgnoreCase(build.status.phase)
+                                if (!buildDone){
+                                    echo "Waiting for '${it.name()}' (${build.status.phase})"
                                 }
-
-                                def build=openshift.selector("${buildSelector.name()}").object();
-                                if (!"Complete".equalsIgnoreCase(build.status.phase)){
-                                    error "Build '${buildSelector.name()}' did not successfully complete (${build.status.phase})"
-                                }
-                                echo "OutputImageDigest: '${build.status.output.to.imageDigest}'"
-                                echo "outputDockerImageReference: '${build.status.outputDockerImageReference}'"
-                            }else{
-                                echo "Skipping new build. Reusing '${buildSelector.name()}'"
-                                def build=buildSelector.object()
-                                echo "OutputImageDigest: '${build.status.output.to.imageDigest}'"
-                                echo "outputDockerImageReference: '${build.status.outputDockerImageReference}'"
+                                return buildDone;
                             }
-
-
-                            //TODO: Re-add build triggers (ImageChange, ConfigurationChange)
+                            
+                            def build=openshift.selector(builds).withEach { build ->
+                                def bo = build.object(); // build object
+                                if (!"Complete".equalsIgnoreCase(bo.status.phase)){
+                                    error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
+                                }
+                            }
+                            
                         }
 
                     } //end script
