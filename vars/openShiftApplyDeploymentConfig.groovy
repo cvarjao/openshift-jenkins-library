@@ -1,4 +1,4 @@
-@NonCPS
+
 def updateContainerImages(_openshift, containers, triggers) {
     for ( c in containers ) {
         for ( t in triggers) {
