@@ -33,12 +33,13 @@ def updateContainerImages(_openshift, containers, triggers) {
 }
 
 def call(_openshift, String appName, String envName, List models) {
-  for ( m in models ) {
+    def dcSelector=['app-name':appName, 'env-name':envName];
+    for ( m in models ) {
       if ("DeploymentConfig".equals(m.kind)){
           m.spec.replicas = 0
           updateContainerImages(_openshift, m.spec.template.spec.containers, m.spec.triggers);
       }
-  }
+    }
 
   echo "Scaling down"
   _openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
