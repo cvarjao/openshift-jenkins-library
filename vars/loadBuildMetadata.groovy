@@ -26,7 +26,7 @@ def call(metadata) {
     
     if (metadata.isPullRequest){
         metadata.pullRequestNumber=env.CHANGE_ID
-        metadata.gitBranchRemoteRef="refs/pull/${pullRequestNumber}/head";
+        metadata.gitBranchRemoteRef="refs/pull/${metadata.pullRequestNumber}/head";
         metadata.buildEnvName="pr-${metadata.pullRequestNumber}"      
     }
   
