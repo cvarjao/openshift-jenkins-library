@@ -71,9 +71,8 @@ def call(body) {
                 steps {
                     echo 'Deploying'
                     script {
-                        openShiftDeploy ({
-                            metadata = metadata
-                            projectName = 'jenkins-deployer-dev.token'
+                        openShiftDeploy (metadata, {
+                            projectName = 'csnr-devops-lab-deploy'
                             envName = "dev"
                             models = {
                                 return [] + openshift.process(
