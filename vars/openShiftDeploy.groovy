@@ -33,8 +33,8 @@ def call(metadata, Closure body) {
           def models=[];
 
           if (context.models!=null){
-            context.models.resolveStrategy = Closure.DELEGATE_FIRST
-            context.models.delegate = context
+            //context.models.resolveStrategy = Closure.DELEGATE_FIRST
+            //ontext.models.delegate = this
             models = context.models();
           }
           
