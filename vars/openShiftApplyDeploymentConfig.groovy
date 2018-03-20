@@ -44,7 +44,7 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
 
     //echo "Scaling down"
     // _openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
-    selector.narrow('dc').withEach { dc ->
+    _openshift.selector( 'dc', dcSelector).withEach { dc ->
         def o = dc.object();
         echo "'${dc.name()}'  paused=${o.spec.paused}"
         if ( o.spec.paused == false ){
@@ -67,7 +67,7 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
       }
   }
     
-    selector.narrow('dc').withEach { dc ->
+  _openshift.selector( 'dc', dcSelector).withEach { dc ->
         def o = dc.object();
         echo "'${dc.name()}'  paused=${o.spec.paused}"
         if (o.spec.paused == true){
