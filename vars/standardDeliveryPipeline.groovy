@@ -225,7 +225,7 @@ def call(body) {
                             
                             echo 'Creating/Updating Objects (from template)'
                             openShiftApplyBuildConfig(appName, buildEnvName, models)
-                            
+                            openshift.apply(models)
                             
                             def gitAppCommitId = metadata.modules['spring-petclinic'].commit;
                             echo "gitAppCommitId:${gitAppCommitId}"
