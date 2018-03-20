@@ -42,9 +42,16 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
       }
     }
 
-  //echo "Scaling down"
-  // _openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
-
+    //echo "Scaling down"
+    // _openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
+    selector.narrow('dc').withEach { dc ->
+        def o = dc.object();
+        echo "'${dc.name()}'  paused=${o.spec.paused}"
+        if ( o.spec.paused == false ){
+            dc.rollout().pause()
+        }
+    }
+    
   echo "The template will create/update ${models.size()} objects"
   //TODO: needs to review usage of 'apply' it recreates Secrets!!!
   def selector=_openshift.apply(models);
@@ -61,7 +68,9 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
   }
     
     selector.narrow('dc').withEach { dc ->
-        if (dc.object().spec.paused == true){
+        def o = dc.object();
+        echo "'${dc.name()}'  paused=${o.spec.paused}"
+        if (o.spec.paused == true){
             dc.rollout().resume()
         }
     }
@@ -71,6 +80,6 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
     
   //_openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
  // _openshift.selector( 'dc', dcSelector).deploy('--cancel=true')
-  _openshift.selector( 'dc', dcSelector).deploy()
+    echo "deploy:\n${_openshift.selector( 'dc', dcSelector).deploy()}"
   //_openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
 }
