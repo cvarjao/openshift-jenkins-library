@@ -55,7 +55,7 @@ def call(body) {
                 steps {
                     script {
                         openShiftBuild(metadata, {
-                            models = { return ['a', 'b', 'c'] }
+                            models = { return ["${openshift.project()}", 'b', 'c'] }
                         });
                         
                         openshift.withCluster() {
