@@ -38,8 +38,8 @@ def call(metadata, Closure body) {
             models = context.models();
           }
           
-            echo "${models}"
-          //openShiftApplyDeploymentConfig(openshift, buildProjectName, metadata.appName, envName, models, buildImageStreams)
+          echo "${models}"
+          openShiftApplyDeploymentConfig(openshift, buildProjectName, metadata.appName, envName, models, buildImageStreams)
 
           } // end openshift.withProject()
       } // end openshift.withCredentials()
