@@ -168,7 +168,7 @@ def call(body) {
             } // end stage
             stage('deploy - DEV') {
                 agent any
-                when { expression { return false} }
+                when { expression { return true} }
                 steps {
                     echo 'Deploying'
                     script {
@@ -198,16 +198,6 @@ def call(body) {
                                     def whoamiResult = openshift.raw( 'whoami' )
                                     def models = [];
                                     echo "WhoAmI:${whoamiResult.out}"
-
-                                    //Database
-                                    /*
-                                    models = openshift.process(
-                                        'openshift//postgresql-ephemeral',
-                                        "-p", "DATABASE_SERVICE_NAME=${dcPrefix}-pgsql${dcSuffix}",
-                                        '-p', "POSTGRESQL_DATABASE=petclinic"
-                                    )
-                                    echo "The 'openshift/postgresql' template will create/update ${models.size()} objects"
-                                    */
 
                                     models.addAll(openshift.process(
                                             'openshift//mysql-ephemeral',
