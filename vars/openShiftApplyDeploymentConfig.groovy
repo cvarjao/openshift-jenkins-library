@@ -34,9 +34,11 @@ def updateContainerImages(_openshift, containers, triggers) {
 
 def call(_openshift, String buildProjectName, String appName, String envName, List models, buildImageStreams) {
     def dcSelector=['app-name':appName, 'env-name':envName];
+    def replicas=[:]
     for ( m in models ) {
       if ("DeploymentConfig".equals(m.kind)){
-          //m.spec.replicas = 0
+          replicas[m.metadata.name]=m.spec.replicas
+          m.spec.replicas = 0
           m.spec.paused = true
           updateContainerImages(_openshift, m.spec.template.spec.containers, m.spec.triggers);
       }
@@ -46,6 +48,7 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
     // _openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
     _openshift.selector( 'dc', dcSelector).withEach { dc ->
         def o = dc.object();
+        replicas[o.metadata.name]=o.spec.replicas
         echo "'${dc.name()}'  paused=${o.spec.paused}"
         if ( o.spec.paused == false ){
             dc.rollout().pause()
@@ -75,12 +78,30 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
         }
     }
     
+    echo "Cancelling:\n${_openshift.selector( 'dc', dcSelector).rollout().cancel()}"
+    echo "Waiting for RC to get cancelled"
+    _openshift.selector( 'dc', dcSelector).related('rc').watch { rc ->
+        def o = rc.object();
+        def phase=o.metadata.annotations['openshift.io/deployment.phase'] 
+        return 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase)
+    }
+    echo "Deployments:\n${_openshift.selector( 'dc', dcSelector).rollout().latest()}"
+    _openshift.selector( 'dc', dcSelector).related('rc').watch { rc ->
+        def o = rc.object();
+        def phase=o.metadata.annotations['openshift.io/deployment.phase'] 
+        return 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase)
+    }
+    
+    //Scaling back to original replicas
+    for (def entry:replicas){
+        echo "${entry.dump()}"
+    }
     
     //openshift.selector("dc/nginx").rollout().resume()
     
     //_openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
-    echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().cancel()}"
+    //echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().cancel()}"
     //echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().latest()}"
-    echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().status()}"
+    //echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().status()}"
     //_openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
 }
