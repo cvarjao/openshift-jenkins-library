@@ -81,6 +81,6 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
     //_openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
     echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().cancel()}"
     //echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().latest()}"
-    echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().latest()}"
+    echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().status()}"
     //_openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
 }
