@@ -91,17 +91,24 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
         }
         return allDone;
     }
-    /*
+    
     echo "Deployments:\n${_openshift.selector( 'dc', dcSelector).rollout().latest()}"
-    _openshift.selector( 'rc', dcSelector).watch { rc ->
-        def o = rc.object();
-        def phase=o.metadata.annotations['openshift.io/deployment.phase'] 
-        return 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase)
+    _openshift.selector( 'rc', dcSelector).watch { rcs ->
+        def allDone=true;
+        rcs.withEach { rc ->
+            def o = rc.object();
+            def phase=o.metadata.annotations['openshift.io/deployment.phase'] 
+            if (!( 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))){
+                allDone=false;
+            }
+        }
+        return allDone;
     }
-    */
-    //Scaling back to original replicas
-    for (def entry:replicas){
-        echo "${entry.dump()}"
+    
+    echo 'Scaling-up application'
+    _openshift.selector( 'dc', dcSelector).withEach { dc ->
+        def o=dc.object();
+        _openshift.selector(dc.name()).scale("--replicas=${replicas[o.metadata.name]}", '--timeout=2m')
     }
     
     //openshift.selector("dc/nginx").rollout().resume()
