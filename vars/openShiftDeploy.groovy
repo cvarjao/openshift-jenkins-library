@@ -1,5 +1,5 @@
 
-def call(Closure body) {
+def call(metadata, Closure body) {
   def context= [:]
   
   if (body!=null){
@@ -8,9 +8,9 @@ def call(Closure body) {
     body()
   }
   
+  echo "metadata: ${metadata.dump()}"
   echo "context: ${context.dump()}"
   
-  def metadata=context.metadata;
   def dcPrefix=metadata.appName;
   def dcSuffix='-dev';
   def envName=context.envName
