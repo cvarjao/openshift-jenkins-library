@@ -1,6 +1,6 @@
 
 def call(metadata, Closure body) {
-  def context= ['models':[]]
+  def context= [:]
   
   if (body!=null){
     body.resolveStrategy = Closure.DELEGATE_FIRST
