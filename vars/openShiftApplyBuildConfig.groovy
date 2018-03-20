@@ -2,6 +2,7 @@
 def call(String appName, String envName, List models) {
   echo "Applying ${models.size()} objects for '${appName}' for '${envName}'"
   for ( o in models ) {
+     echo "Processing ${o.metadata.name}'"
       o.metadata.labels[ "app" ] = "${appName}-${envName}"
       /*
       def sel=openshift.selector("${o.kind}/${o.metadata.name}");
