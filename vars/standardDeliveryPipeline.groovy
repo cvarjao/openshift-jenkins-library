@@ -87,7 +87,7 @@ def call(body) {
     def resourceBuildNameSuffix = '-dev';
     def buildEnvName = 'dev'
     def gitRepoUrl= ''
-    def metadata=["]
+    def metadata=[:];
 
     pipeline {
         // The options directive is for configuration that applies to the whole job.
