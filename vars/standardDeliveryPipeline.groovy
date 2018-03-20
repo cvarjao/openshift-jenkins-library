@@ -265,39 +265,9 @@ def call(body) {
                                             "-p", "BC_PROJECT=${openshift.project()}",
                                             "-p", "DC_PROJECT=${openshift.project()}"
                                     ));
-                                    for ( m in models ) {
-                                        if ("DeploymentConfig".equals(m.kind)){
-                                            m.spec.replicas = 0
-                                            updateContainerImages(m.spec.template.spec.containers, m.spec.triggers);
-                                        }
-                                    }
-
-                                    echo "Scaling down"
-                                    openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
-
-                                    echo "The template will create/update ${models.size()} objects"
-                                    //TODO: needs to review usage of 'apply' it recreates Secrets!!!
-                                    def selector=openshift.apply(models);
-                                    selector.label(['app':"${appName}-${envName}", 'app-name':"${appName}", 'env-name':"${envName}"], "--overwrite")
-
-                                    selector.narrow('is').withEach { imageStream ->
-                                        def o=imageStream.object();
-                                        def imageStreamName="${o.metadata.name}"
-
-                                        if (buildImageStreams[imageStreamName] != null ){
-                                            echo "Tagging '${buildProjectName}/${o.metadata.name}:latest' as '${o.metadata.name}:${envName}'"
-                                            openshift.tag("${buildProjectName}/${o.metadata.name}:latest", "${o.metadata.name}:${envName}")
-                                        }
-                                    }
-
-
-
-                                    openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
-                                    //openshift.selector("dc/${dcPrefix}${dcSuffix}").rollout().resume();
-
-                                    //def buildSelector = openshift.selector( 'dc', dcSelector);
-
-                                    //TODO: Re-add build triggers (ImageChange, ConfigurationChange)
+                                    
+                                    openShiftApplyDeploymentConfig(openshift, appName, envName, models)
+                                    
                                 } // end openshift.withProject()
                             } // end openshift.withCredentials()
                         } // end openshift.withCluster()
