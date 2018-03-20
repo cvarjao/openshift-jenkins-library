@@ -6,9 +6,9 @@ def call(_openshift, baseSelector, commitId) {
     if (buildSelector.count()==0){
         echo "Starting new build for '${baseSelector}'"
         buildSelector = _openshift.selector( 'bc', baseSelector).startBuild("--commit=${commitId}")
+        echo "New build started - ${buildSelector.name()}"
         buildSelector.label(['commit-id':"${commitId}"], "--overwrite")
         buildNameSelector=buildSelector.name()
-        echo "New build started - ${buildSelector.name()}"
         /*
         buildSelector.logs('-f');        
         openshift.selector("${buildSelector.name()}").watch {
