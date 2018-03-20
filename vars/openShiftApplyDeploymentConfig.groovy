@@ -76,10 +76,11 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
     }
     
     
-  //openshift.selector("dc/nginx").rollout().resume()
+    //openshift.selector("dc/nginx").rollout().resume()
     
-  //_openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
- // _openshift.selector( 'dc', dcSelector).deploy('--cancel=true')
-   echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().latest('--again=true')}"
-  //_openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
+    //_openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
+    echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().cancel()}"
+    //echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().latest()}"
+    echo "deploy:\n${_openshift.selector( 'dc', dcSelector).rollout().latest()}"
+    //_openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
 }
