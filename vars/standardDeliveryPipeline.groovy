@@ -71,7 +71,7 @@ def call(body) {
                 steps {
                     echo 'Deploying'
                     script {
-                        openShiftDeploy (this, {
+                        openShiftDeploy ({
                             metadata = metadata
                             projectName = 'jenkins-deployer-dev.token'
                             envName = "dev"
