@@ -59,13 +59,13 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
           _openshift.tag("${buildProjectName}/${o.metadata.name}:latest", "${o.metadata.name}:${envName}")
       }
   }
-    /*
+    
     selector.narrow('dc').withEach { dc ->
         if (dc.object().spec.paused == true){
             dc.rollout().resume()
         }
     }
-    */
+    
     
   //openshift.selector("dc/nginx").rollout().resume()
     
