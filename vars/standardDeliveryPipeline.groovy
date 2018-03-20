@@ -55,9 +55,14 @@ def call(body) {
                 steps {
                     script {
                         openShiftBuild(metadata, {
-                            models = { return ["${openshift.project()}", 'b', 'c'] }
+                            models = { return openshift.process("-f", "openshift.bc.json",
+                                    "-p", "APP_NAME=${metadata.appName}",
+                                    "-p", "ENV_NAME=${metadata.buildEnvName}",
+                                    "-p", "NAME_PREFIX=${metadata.buildNamePrefix}",
+                                    "-p", "NAME_SUFFIX=${metadata.buildNameSuffix}",
+                                    "-p", "GIT_REPO_URL=${metadata.gitRepoUrl}") }
                         });
-                        
+                        /*
                         openshift.withCluster() {
                             //create or patch DCs
                             echo 'Processing Templates'
@@ -77,7 +82,7 @@ def call(body) {
                             openShiftWaitForBuilds(openshift, builds)
                             
                         }
-
+                        */
                     } //end script
                 } //end steps
             } // end stage
