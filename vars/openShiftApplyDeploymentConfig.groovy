@@ -36,7 +36,7 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
     def dcSelector=['app-name':appName, 'env-name':envName];
     for ( m in models ) {
       if ("DeploymentConfig".equals(m.kind)){
-          m.spec.replicas = 0
+          //m.spec.replicas = 0
           m.spec.paused = true
           updateContainerImages(_openshift, m.spec.template.spec.containers, m.spec.triggers);
       }
