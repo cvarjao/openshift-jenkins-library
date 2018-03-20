@@ -87,7 +87,7 @@ def call(body) {
                             
                             echo 'Creating/Updating Objects (from template)'
                             def builds=[];
-                            builds.add(openShiftStartBuild(openshift, bcSelector, "${metadata.modules['spring-petclinic'].commit}"));
+                            builds.add(openShiftStartBuild(openshift, ['app-name':appName, 'env-name':buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
                             openShiftWaitForBuilds(openshift, builds)
                             
                         }
