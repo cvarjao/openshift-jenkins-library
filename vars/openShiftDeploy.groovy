@@ -1,7 +1,6 @@
 
-def call(_this, Closure body) {
-  def context= ['metadata': _this.metadata]
-  def metadata= _this.metadata;
+def call(Closure body) {
+  def context= [:]
   
   if (body!=null){
     body.resolveStrategy = Closure.DELEGATE_FIRST
@@ -9,6 +8,7 @@ def call(_this, Closure body) {
     body()
   }
   
+  def metadata=context.metadata;
   def dcPrefix=metadata.appName;
   def dcSuffix='-dev';
   def envName=context.envName
