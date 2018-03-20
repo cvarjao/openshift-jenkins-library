@@ -1,5 +1,6 @@
 
 def call(String appName, String envName, List models) {
+  echo "Applying ${models.size()} objects for '${appName}' for '${envName}'"
   for ( o in models ) {
       o.metadata.labels[ "app" ] = "${appName}-${envName}"
       /*
