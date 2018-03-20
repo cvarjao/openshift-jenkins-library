@@ -15,5 +15,5 @@ def call(String appName, String envName, List models) {
       }
       */
   }
-  openshift.apply(models);
+  //openshift.apply(models);
 }
