@@ -34,10 +34,9 @@ def call(body) {
     body.delegate = pipelineParams
     body()
 
+    def metadata=['appName':'spring-petclinic'];
+    
     def appName='spring-petclinic'
-    def appId=null;
-    def doDeploy=false;
-    def gitCommitId=''
     def isPullRequest=false;
     def pullRequestNumber=null;
     def gitBranchRemoteRef=''
@@ -45,7 +44,7 @@ def call(body) {
     def resourceBuildNameSuffix = '-dev';
     def buildEnvName = 'dev'
     def gitRepoUrl= ''
-    def metadata=[:];
+
 
     pipeline {
         // The options directive is for configuration that applies to the whole job.
@@ -63,38 +62,8 @@ def call(body) {
                     milestone(1)
                     checkout scm
                     script {
-                        metadata.modules=listModules(pwd())
-                        echo "${metadata.modules}"
-                    }
-                    script {
-                        gitCommitId = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-                        isPullRequest=(env.CHANGE_ID != null && env.CHANGE_ID.trim().length()>0)
-
-                        echo "gitCommitId:${gitCommitId}"
-                        echo "isPullRequest:${isPullRequest}"
-
-
-                        gitRepoUrl = scm.getUserRemoteConfigs()[0].getUrl()
-                        def envName = null;
-
-
-                        if (isPullRequest){
-                            pullRequestNumber=env.CHANGE_ID
-                            gitBranchRemoteRef="refs/pull/${pullRequestNumber}/head";
-                            buildBranchName = env.BRANCH_NAME;
-                            sh "git remote -v"
-                            sh "git ls-remote origin refs/pull/${pullRequestNumber}/*"
-                        }else{
-                            buildBranchName = env.BRANCH_NAME;
-                            resourceBuildNamePrefix = "-dev";
-                        }
-
-                        echo "gitRepoUrl:${gitRepoUrl}"
-                        echo "appName:${appName}"
-                        echo "appId:${appId}"
-                        echo "buildBranchName:${buildBranchName}"
-                        echo "scm.getBranches():${scm.getBranches()}"
-                        echo "scm.getKey():${scm.getKey()}"
+                        loadBuildMetadata(metadata);
+                        echo "metadata:\n${metadata}"
                     } //end script
                 }
             }
@@ -112,37 +81,22 @@ def call(body) {
                 when { expression { return true} }
                 steps {
                     script {
-                        def bcPrefix=appName;
-                        def bcSuffix='-dev';
-                        def buildRefBranchName=gitBranchRemoteRef;
-
-                        if (isPullRequest){
-                            buildEnvName = "pr-${pullRequestNumber}"
-                            bcSuffix="-pr-${pullRequestNumber}";
-                        }else{
-                            buildEnvName = 'dev'
-                        }
-
-                        def bcSelector=['app-name':appName, 'env-name':buildEnvName];
-
                         openshift.withCluster() {
                             //create or patch DCs
                             echo 'Processing Templates'
                             def models = openshift.process("-f", "openshift.bc.json",
-                                    "-p", "APP_NAME=${appName}",
-                                    "-p", "ENV_NAME=${buildEnvName}",
-                                    "-p", "NAME_PREFIX=${bcPrefix}",
-                                    "-p", "NAME_SUFFIX=${bcSuffix}",
-                                    "-p", "GIT_REPO_URL=${gitRepoUrl}")
+                                    "-p", "APP_NAME=${metadata.appName}",
+                                    "-p", "ENV_NAME=${metadata.buildEnvName}",
+                                    "-p", "NAME_PREFIX=${metadata.buildNamePrefix}",
+                                    "-p", "NAME_SUFFIX=${metadata.buildNameSuffix}",
+                                    "-p", "GIT_REPO_URL=${metadata.gitRepoUrl}")
+                            
+                            echo 'Processing template ...'
+                            openShiftApplyBuildConfig(openshift, metadata.appName, metadata.buildEnvName, models)
                             
                             echo 'Creating/Updating Objects (from template)'
-                            openShiftApplyBuildConfig(openshift, appName, buildEnvName, models)
-                            
-                            def gitAppCommitId = metadata.modules['spring-petclinic'].commit;
-                            echo "gitAppCommitId:${gitAppCommitId}"
                             def builds=[];
-                            
-                            builds.add(openShiftStartBuild(openshift, bcSelector, gitAppCommitId));
+                            builds.add(openShiftStartBuild(openshift, bcSelector, "${metadata.modules['spring-petclinic'].commit}"));
                             openShiftWaitForBuilds(openshift, builds)
                             
                         }
@@ -207,7 +161,7 @@ def call(body) {
             } // end stage
             stage('Deploy - TEST') {
                 agent any
-                when { expression { doDeploy == true} }
+                when { expression { return false} }
                 steps {
                     echo "Testing ..."
                     echo "Testing ... Done!"
@@ -215,7 +169,7 @@ def call(body) {
             }
             stage('Deploy - PROD') {
                 agent any
-                when { expression { doDeploy == true} }
+                when { expression { return false} }
                 steps {
                     echo "Packaging ..."
                     echo "Packaging ... Done!"
@@ -223,7 +177,7 @@ def call(body) {
             }
             stage('Cleanup') {
                 agent any
-                when { expression { doDeploy == true} }
+                when { expression { return false} }
                 steps {
                     echo "Publishing ..."
                     echo "Publishing ... Done!"
