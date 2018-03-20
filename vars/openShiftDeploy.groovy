@@ -8,6 +8,8 @@ def call(Closure body) {
     body()
   }
   
+  echo "context: ${context.dump()}"
+  
   def metadata=context.metadata;
   def dcPrefix=metadata.appName;
   def dcSuffix='-dev';
