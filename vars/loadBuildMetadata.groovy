@@ -14,19 +14,22 @@ def listModules(workspaceDir) {
 }
 
 def call(metadata) {
-  metadata.modules=listModules(pwd())
-  metadata.commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-  metadata.isPullRequest=(env.CHANGE_ID != null && env.CHANGE_ID.trim().length()>0)
-  metadata.gitRepoUrl = scm.getUserRemoteConfigs()[0].getUrl()
+    metadata.modules=listModules(pwd())
+    metadata.commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+    metadata.isPullRequest=(env.CHANGE_ID != null && env.CHANGE_ID.trim().length()>0)
+    metadata.gitRepoUrl = scm.getUserRemoteConfigs()[0].getUrl()
+
+    metadata.buildBranchName = env.BRANCH_NAME;
+    metadata.buildEnvName = 'bld'
+    metadata.buildNamePrefix = "${metadata.appName}"
+
+    
+    if (isPullRequest){
+        metadata.pullRequestNumber=env.CHANGE_ID
+        metadata.gitBranchRemoteRef="refs/pull/${pullRequestNumber}/head";
+        metadata.buildEnvName="pr-${metadata.pullRequestNumber}"      
+    }
   
-  metadata.buildBranchName = env.BRANCH_NAME;
-  metadata.buildEnvName = 'bld'
-  
-  if (isPullRequest){
-      metadata.pullRequestNumber=env.CHANGE_ID
-      metadata.gitBranchRemoteRef="refs/pull/${pullRequestNumber}/head";
-      metadata.buildEnvName="pr-${metadata.pullRequestNumber}"
-  }
-  
-  return metadata;
+    metadata.buildNameSuffix = "-${metadata.buildEnvName}"
+    return metadata;
 }
