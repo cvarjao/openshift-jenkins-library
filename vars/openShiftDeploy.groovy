@@ -1,6 +1,6 @@
 
 def call(_this, Closure body) {
-  def context= [:]
+  def context= ['metadata': _this.metadata]
   def metadata= _this.metadata;
   
   if (body!=null){
