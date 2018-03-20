@@ -215,6 +215,7 @@ def call(body) {
                             }
 
                             //create or patch DCs
+                            echo 'Processing Templates'
                             def models = openshift.process("-f", "openshift.bc.json",
                                     "-p", "APP_NAME=${appName}",
                                     "-p", "ENV_NAME=${buildEnvName}",
@@ -222,6 +223,7 @@ def call(body) {
                                     "-p", "NAME_SUFFIX=${bcSuffix}",
                                     "-p", "GIT_REPO_URL=${gitRepoUrl}")
                             
+                            echo 'Creating/Updating Objects (from template)'
                             openShiftApplyBuildConfig(appName, buildEnvName, models)
                             
                             
