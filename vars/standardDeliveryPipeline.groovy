@@ -214,7 +214,7 @@ def call(body) {
                                             "-p", "DC_PROJECT=${openshift.project()}"
                                     ));
                                     
-                                    openShiftApplyDeploymentConfig(openshift, appName, envName, models, buildImageStreams)
+                                    openShiftApplyDeploymentConfig(openshift, buildProjectName, appName, envName, models, buildImageStreams)
                                     
                                 } // end openshift.withProject()
                             } // end openshift.withCredentials()
