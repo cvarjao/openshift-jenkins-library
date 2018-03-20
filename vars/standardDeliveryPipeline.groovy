@@ -87,7 +87,7 @@ def call(body) {
                             
                             echo 'Creating/Updating Objects (from template)'
                             def builds=[];
-                            builds.add(openShiftStartBuild(openshift, ['app-name':appName, 'env-name':buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
+                            builds.add(openShiftStartBuild(openshift, ['app-name':metadata.appName, 'env-name':metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
                             openShiftWaitForBuilds(openshift, builds)
                             
                         }
@@ -128,7 +128,7 @@ def call(body) {
                                     ));
 
                                     models.addAll(openshift.process("-f", "openshift.dc.json",
-                                            "-p", "APP_NAME=${appName}",
+                                            "-p", "APP_NAME=${metadata.appName}",
                                             "-p", "ENV_NAME=${envName}",
                                             "-p", "NAME_PREFIX=${dcPrefix}",
                                             "-p", "NAME_SUFFIX=${dcSuffix}",
@@ -136,7 +136,7 @@ def call(body) {
                                             "-p", "DC_PROJECT=${openshift.project()}"
                                     ));
                                     
-                                    openShiftApplyDeploymentConfig(openshift, buildProjectName, appName, envName, models, buildImageStreams)
+                                    openShiftApplyDeploymentConfig(openshift, buildProjectName, metadata.appName, envName, models, buildImageStreams)
                                     
                                 } // end openshift.withProject()
                             } // end openshift.withCredentials()
