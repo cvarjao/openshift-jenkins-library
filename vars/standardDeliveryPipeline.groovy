@@ -62,27 +62,6 @@ def call(body) {
                                     "-p", "NAME_SUFFIX=${metadata.buildNameSuffix}",
                                     "-p", "GIT_REPO_URL=${metadata.gitRepoUrl}") }
                         });
-                        /*
-                        openshift.withCluster() {
-                            //create or patch DCs
-                            echo 'Processing Templates'
-                            def models = openshift.process("-f", "openshift.bc.json",
-                                    "-p", "APP_NAME=${metadata.appName}",
-                                    "-p", "ENV_NAME=${metadata.buildEnvName}",
-                                    "-p", "NAME_PREFIX=${metadata.buildNamePrefix}",
-                                    "-p", "NAME_SUFFIX=${metadata.buildNameSuffix}",
-                                    "-p", "GIT_REPO_URL=${metadata.gitRepoUrl}")
-                            
-                            echo 'Processing template ...'
-                            openShiftApplyBuildConfig(openshift, metadata.appName, metadata.buildEnvName, models)
-                            
-                            echo 'Creating/Updating Objects (from template)'
-                            def builds=[];
-                            builds.add(openShiftStartBuild(openshift, ['app-name':metadata.appName, 'env-name':metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
-                            openShiftWaitForBuilds(openshift, builds)
-                            
-                        }
-                        */
                     } //end script
                 } //end steps
             } // end stage
@@ -92,6 +71,26 @@ def call(body) {
                 steps {
                     echo 'Deploying'
                     script {
+                        openShiftDeploy (this, {
+                            projectName = 'jenkins-deployer-dev.token'
+                            envName = "dev"
+                            models = {
+                                return [] + openshift.process(
+                                            'openshift//mysql-ephemeral',
+                                            "-p", "DATABASE_SERVICE_NAME=${dcPrefix}-db${dcSuffix}",
+                                            '-p', "MYSQL_DATABASE=petclinic"
+                                    ) + openshift.process("-f", "openshift.dc.json",
+                                            "-p", "APP_NAME=${metadata.appName}",
+                                            "-p", "ENV_NAME=${envName}",
+                                            "-p", "NAME_PREFIX=${dcPrefix}",
+                                            "-p", "NAME_SUFFIX=${dcSuffix}",
+                                            "-p", "BC_PROJECT=${openshift.project()}",
+                                            "-p", "DC_PROJECT=${openshift.project()}"
+                                    )
+                            }
+                        })
+                        
+                        /*
                         def dcPrefix=metadata.appName;
                         def dcSuffix='-dev';
                         def envName="dev"
@@ -132,6 +131,7 @@ def call(body) {
                                 } // end openshift.withProject()
                             } // end openshift.withCredentials()
                         } // end openshift.withCluster()
+                        */
 
                     } //end script
                 }
