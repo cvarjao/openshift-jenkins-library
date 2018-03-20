@@ -80,13 +80,13 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
     
     echo "Cancelling:\n${_openshift.selector( 'dc', dcSelector).rollout().cancel()}"
     echo "Waiting for RC to get cancelled"
-    _openshift.selector( 'dc', dcSelector).related('rc').watch { rc ->
+    _openshift.selector( 'rc', dcSelector).watch { rc ->
         def o = rc.object();
         def phase=o.metadata.annotations['openshift.io/deployment.phase'] 
         return 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase)
     }
     echo "Deployments:\n${_openshift.selector( 'dc', dcSelector).rollout().latest()}"
-    _openshift.selector( 'dc', dcSelector).related('rc').watch { rc ->
+    _openshift.selector( 'rc', dcSelector).watch { rc ->
         def o = rc.object();
         def phase=o.metadata.annotations['openshift.io/deployment.phase'] 
         return 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase)
