@@ -106,8 +106,8 @@ def call(body) {
                         def envName="dev"
 
                         if (metadata.isPullRequest){
-                            envName = "pr-${pullRequestNumber}"
-                            dcSuffix="-pr-${pullRequestNumber}";
+                            envName = "pr-${metadata.pullRequestNumber}"
+                            dcSuffix="-pr-${metadata.pullRequestNumber}";
                         }
 
                         openshift.withCluster() {
