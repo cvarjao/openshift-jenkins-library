@@ -89,49 +89,6 @@ def call(body) {
                                     )
                             }
                         })
-                        
-                        /*
-                        def dcPrefix=metadata.appName;
-                        def dcSuffix='-dev';
-                        def envName="dev"
-
-                        if (metadata.isPullRequest){
-                            envName = "pr-${metadata.pullRequestNumber}"
-                            dcSuffix="-pr-${metadata.pullRequestNumber}";
-                        }
-
-                        openshift.withCluster() {
-                            def buildProjectName="${openshift.project()}"
-                            def buildImageStreams=[:];
-                            openshift.selector( 'is', ['app-name':metadata.appName, 'env-name':metadata.buildEnvName]).withEach {
-                                buildImageStreams["${it.object().metadata.name}"]=true;
-                            }
-
-                            echo "buildImageStreams:${buildImageStreams}"
-                            openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
-                                openshift.withProject( 'csnr-devops-lab-deploy' ) {
-                                    def models = [];
-                                    models.addAll(openshift.process(
-                                            'openshift//mysql-ephemeral',
-                                            "-p", "DATABASE_SERVICE_NAME=${dcPrefix}-db${dcSuffix}",
-                                            '-p', "MYSQL_DATABASE=petclinic"
-                                    ));
-
-                                    models.addAll(openshift.process("-f", "openshift.dc.json",
-                                            "-p", "APP_NAME=${metadata.appName}",
-                                            "-p", "ENV_NAME=${envName}",
-                                            "-p", "NAME_PREFIX=${dcPrefix}",
-                                            "-p", "NAME_SUFFIX=${dcSuffix}",
-                                            "-p", "BC_PROJECT=${openshift.project()}",
-                                            "-p", "DC_PROJECT=${openshift.project()}"
-                                    ));
-                                    
-                                    openShiftApplyDeploymentConfig(openshift, buildProjectName, metadata.appName, envName, models, buildImageStreams)
-                                    
-                                } // end openshift.withProject()
-                            } // end openshift.withCredentials()
-                        } // end openshift.withCluster()
-                        */
 
                     } //end script
                 }
