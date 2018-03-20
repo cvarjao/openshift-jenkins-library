@@ -36,13 +36,14 @@ def call(_openshift, String appName, String envName, List models, buildImageStre
     def dcSelector=['app-name':appName, 'env-name':envName];
     for ( m in models ) {
       if ("DeploymentConfig".equals(m.kind)){
-          m.spec.replicas = 0
+          //m.spec.replicas = 0
+          m.spec.paused = true
           updateContainerImages(_openshift, m.spec.template.spec.containers, m.spec.triggers);
       }
     }
 
-  echo "Scaling down"
-  _openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
+  //echo "Scaling down"
+  // _openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
 
   echo "The template will create/update ${models.size()} objects"
   //TODO: needs to review usage of 'apply' it recreates Secrets!!!
@@ -58,6 +59,14 @@ def call(_openshift, String appName, String envName, List models, buildImageStre
           _openshift.tag("${buildProjectName}/${o.metadata.name}:latest", "${o.metadata.name}:${envName}")
       }
   }
-
-  _openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
+    selector.narrow('dc').withEach { dc ->
+        if (dc.object().spec.paused == true){
+            dc.rollout().resume()
+        }
+    }
+    
+  //openshift.selector("dc/nginx").rollout().resume()
+    
+  //_openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
+  //_openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
 }
