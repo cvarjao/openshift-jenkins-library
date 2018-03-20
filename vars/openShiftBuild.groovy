@@ -10,5 +10,6 @@ def call(metadata, Closure body) {
   
   openshift.withCluster() {
     echo "project:${openshift.project()}"
+    echo "models:${context.models}"
   }
 }
