@@ -1,7 +1,7 @@
 
 def call(String appName, String envName, List models) {
   for ( o in models ) {
-      o.metadata.labels[ "app" ] = "${appName}-${buildEnvName}"
+      o.metadata.labels[ "app" ] = "${appName}-${envName}"
       /*
       def sel=openshift.selector("${o.kind}/${o.metadata.name}");
       if (sel.count()==0){
