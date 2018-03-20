@@ -206,7 +206,7 @@ def call(body) {
                             //Wait for all builds to complete
                             openshift.selector(builds).watch {
                                 def build=it.object();
-                                def buildDone=!"Running".equalsIgnoreCase(build.status.phase)
+                                def buildDone=("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
                                 if (!buildDone){
                                     echo "Waiting for '${it.name()}' (${build.status.phase})"
                                 }
