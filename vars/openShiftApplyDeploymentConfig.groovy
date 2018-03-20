@@ -79,19 +79,26 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
     }
     
     echo "Cancelling:\n${_openshift.selector( 'dc', dcSelector).rollout().cancel()}"
-    echo "Waiting for RC to get cancelled"
-    _openshift.selector( 'rc', dcSelector).watch { rc ->
-        def o = rc.object();
-        def phase=o.metadata.annotations['openshift.io/deployment.phase'] 
-        return 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase)
+    echo "Waiting for RCs to get cancelled"
+    _openshift.selector( 'rc', dcSelector).watch { rcs ->
+        def allDone=true;
+        rcs.withEach { rc ->
+            def o = rc.object();
+            def phase=o.metadata.annotations['openshift.io/deployment.phase'] 
+            if (!( 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))){
+                allDone=false;
+            }
+        }
+        return allDone;
     }
+    /*
     echo "Deployments:\n${_openshift.selector( 'dc', dcSelector).rollout().latest()}"
     _openshift.selector( 'rc', dcSelector).watch { rc ->
         def o = rc.object();
         def phase=o.metadata.annotations['openshift.io/deployment.phase'] 
         return 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase)
     }
-    
+    */
     //Scaling back to original replicas
     for (def entry:replicas){
         echo "${entry.dump()}"
