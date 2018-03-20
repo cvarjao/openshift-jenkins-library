@@ -11,13 +11,13 @@ def call(metadata, Closure body) {
   echo "metadata: ${metadata.dump()}"
   echo "context: ${context.dump()}"
   
-  def dcPrefix=metadata.appName;
-  def dcSuffix='-dev';
-  def envName=context.envName
+  context.dcPrefix=metadata.appName;
+  context.dcSuffix='-dev';
+//  context.envName=context.envName
 
   if (metadata.isPullRequest){
-      envName = "pr-${metadata.pullRequestNumber}"
-      dcSuffix="-pr-${metadata.pullRequestNumber}";
+      context.envName = "pr-${metadata.pullRequestNumber}"
+      context.dcSuffix="-pr-${metadata.pullRequestNumber}";
   }
 
   openshift.withCluster() {
@@ -34,7 +34,7 @@ def call(metadata, Closure body) {
 
           if (context.models!=null){
             context.models.resolveStrategy = Closure.DELEGATE_FIRST
-            context.models.delegate = this
+            context.models.delegate = context
             models = context.models();
           }
           
