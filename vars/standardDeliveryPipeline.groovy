@@ -10,24 +10,6 @@ import hudson.model.Result;
 import jenkins.model.CauseOfInterruption.UserInterruption;
 import org.kohsuke.github.*;
 
-
-def listModules(workspaceDir) {
-    def modules=[:];
-    for (def file:new File(workspaceDir).listFiles()){
-        if (file.isDirectory() && !file.getName().startsWith('.')) {
-            def module = ['name':file.getName()]
-            def commitId=null; //"git rev-list -1 HEAD -- '${file.name}'".execute(null, new File(workspaceDir)).text
-            commitId=sh(returnStdout: true, script: "#!/bin/sh -e\n git rev-list -1 HEAD -- '${file.name}'").trim()
-
-            module['commit']="${commitId}"
-
-            modules[file.getName()] = module;
-        }
-    }
-    return modules;
-}
-
-
 def call(body) {
     def pipelineParams= [:]
     body.resolveStrategy = Closure.DELEGATE_FIRST
@@ -72,6 +54,8 @@ def call(body) {
                 when { expression { return true} }
                 steps {
                     script {
+                        openShiftBuild(metadata);
+                        
                         openshift.withCluster() {
                             //create or patch DCs
                             echo 'Processing Templates'
