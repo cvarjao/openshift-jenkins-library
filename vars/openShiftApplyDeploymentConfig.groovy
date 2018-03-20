@@ -36,7 +36,7 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
     def dcSelector=['app-name':appName, 'env-name':envName];
     for ( m in models ) {
       if ("DeploymentConfig".equals(m.kind)){
-          //m.spec.replicas = 0
+          m.spec.replicas = 0
           m.spec.paused = true
           updateContainerImages(_openshift, m.spec.template.spec.containers, m.spec.triggers);
       }
@@ -59,14 +59,18 @@ def call(_openshift, String buildProjectName, String appName, String envName, Li
           _openshift.tag("${buildProjectName}/${o.metadata.name}:latest", "${o.metadata.name}:${envName}")
       }
   }
+    /*
     selector.narrow('dc').withEach { dc ->
         if (dc.object().spec.paused == true){
             dc.rollout().resume()
         }
     }
+    */
     
   //openshift.selector("dc/nginx").rollout().resume()
     
   //_openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
+ // _openshift.selector( 'dc', dcSelector).deploy('--cancel=true')
+  _openshift.selector( 'dc', dcSelector).deploy()
   //_openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
 }
