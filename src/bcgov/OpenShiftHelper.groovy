@@ -63,7 +63,7 @@ class OpenShiftHelper {
 
     script.echo "Applying ${models.size()} objects for '${appName}' for '${envName}'"
     for ( o in models ) {
-       echo "Processing '${o.kind}/${o.metadata.name}'"
+       script.echo "Processing '${o.kind}/${o.metadata.name}'"
         o.metadata.labels[ "app" ] = "${appName}-${envName}"
         /*
         def sel=openshift.selector("${o.kind}/${o.metadata.name}");
