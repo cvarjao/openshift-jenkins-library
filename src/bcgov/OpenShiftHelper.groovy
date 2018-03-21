@@ -25,7 +25,7 @@ class OpenShiftHelper {
 
           script.echo 'Processing template ...'
           
-          applyBuildConfig(script);
+          applyBuildConfig(script, script.metadata.appName, script.metadata.buildEnvName, models);
 
           script.echo 'Creating/Updating Objects (from template)'
           //def builds=[];
@@ -35,11 +35,50 @@ class OpenShiftHelper {
       }
   }
   
-  def applyBuildConfig(CpsScript script) {
+  def applyBuildConfig(CpsScript script, appName, envName, models) {
     //def body = {
       script.echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
       script.echo "openShiftBuild:openshift2:${script.openshift.dump()}"
     //} //end 'body 'closure
+    
+    def bcSelector=['app-name':appName, 'env-name':envName];
+
+    script.echo "openShiftApplyBuildConfig:openshift1:${script.openshift.dump()}"
+
+    script.echo "Cancelling all pending builds"
+    script.openshift.selector( 'bc', bcSelector).cancelBuild();
+
+    script.echo "Waiting for all pending builds to complete or cancel"
+    script.openshift.selector( 'builds', bcSelector).watch {
+        if ( it.count() == 0 ) return true
+        def allDone = true
+        it.withEach {
+            def buildModel = it.object()
+            if ( it.object().status.phase != "Complete" &&  it.object().status.phase != "Failed") {
+                allDone = false
+            }
+        }
+        return allDone;
+    }
+
+    script.echo "Applying ${models.size()} objects for '${appName}' for '${envName}'"
+    for ( o in models ) {
+       echo "Processing '${o.kind}/${o.metadata.name}'"
+        o.metadata.labels[ "app" ] = "${appName}-${envName}"
+        /*
+        def sel=openshift.selector("${o.kind}/${o.metadata.name}");
+        if (sel.count()==0){
+            echo "Creating '${o.kind}/${o.metadata.name}"
+            openshift.create([o]);
+        }else{
+            echo "Patching '${o.kind}/${o.metadata.name}"
+            openshift.apply(o);
+        }
+        */
+    }
+    script.openshift.apply(models);
+    
+
     
     //body.resolveStrategy = Closure.DELEGATE_FIRST;
     //body.delegate = script;
