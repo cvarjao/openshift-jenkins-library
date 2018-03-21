@@ -155,12 +155,12 @@ class OpenShiftHelper {
             def buildProjectName="${openshift.project()}"
             def buildImageStreams=[:]
 
-            echo "Collecting ImageStreams";
+            script.echo "Collecting ImageStreams";
             openshift.selector( 'is', ['app-name':metadata.appName, 'env-name':metadata.buildEnvName]).freeze().withEach {
                 buildImageStreams["${it.object().metadata.name}"]=true
             }
 
-            echo "buildImageStreams:${buildImageStreams}"
+            script.echo "buildImageStreams:${buildImageStreams}"
             openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
                 openshift.withProject( context.projectName ) {
                     def models = [];
@@ -172,7 +172,7 @@ class OpenShiftHelper {
                     }
 
 
-                    echo "${models}"
+                    script.echo "${models}"
                     //openShiftApplyDeploymentConfig(openshift, buildProjectName, metadata.appName, context.envName, models, buildImageStreams)
 
                 } // end openshift.withProject()
