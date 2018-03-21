@@ -251,8 +251,8 @@ class OpenShiftHelper {
                 openshift.tag("${buildProjectName}/${o.metadata.name}:latest", "${o.metadata.name}:${envName}")
             }
         }
-
-        openshift.selector( 'dc', dcSelector).withEach { dc ->
+        script.echo 'Resuming DeploymentConfigs'
+        openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
             def o = dc.object();
             script.echo "'${dc.name()}'  paused=${o.spec.paused}"
             if (o.spec.paused == true){
@@ -262,7 +262,7 @@ class OpenShiftHelper {
 
         script.echo "Cancelling:\n${openshift.selector( 'dc', dcSelector).rollout().cancel()}"
         script.echo "Waiting for RCs to get cancelled"
-        openshift.selector( 'rc', dcSelector).watch { rcs ->
+        openshift.selector( 'rc', dcSelector).freeze().watch { rcs ->
             def allDone=true;
             rcs.withEach { rc ->
                 def o = rc.object();
@@ -275,7 +275,7 @@ class OpenShiftHelper {
         }
 
         script.echo "Deployments:\n${openshift.selector( 'dc', dcSelector).rollout().latest()}"
-        openshift.selector( 'rc', dcSelector).watch { rcs ->
+        openshift.selector( 'rc', dcSelector).freeze().watch { rcs ->
             def allDone=true;
             rcs.withEach { rc ->
                 def o = rc.object();
@@ -288,7 +288,7 @@ class OpenShiftHelper {
         }
 
         script.echo 'Scaling-up application'
-        openshift.selector( 'dc', dcSelector).withEach { dc ->
+        openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
             def o=dc.object();
             openshift.selector(dc.name()).scale("--replicas=${replicas[o.metadata.name]}", '--timeout=2m')
         }
