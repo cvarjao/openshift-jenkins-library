@@ -143,12 +143,14 @@ class OpenShiftHelper {
         OpenShiftDSL openshift=script.openshift
         def echo = script.echo
         Map metadata = context.metadata
-        context.dcPrefix=metadata.appName
-        context.dcSuffix='-dev'
+
+        def envName= context.envName
+        def dcPrefix=metadata.appName
+        def dcSuffix='-dev'
 
         if (metadata.isPullRequest){
             context.envName = "pr-${metadata.pullRequestNumber}"
-            context.dcSuffix="-pr-${metadata.pullRequestNumber}"
+            dcSuffix="-pr-${metadata.pullRequestNumber}"
         }
 
         openshift.withCluster() {
