@@ -134,7 +134,7 @@ class OpenShiftHelper {
             return buildDone;
         }
 
-        script.selector(builds).withEach { build ->
+        script.openshift.selector(builds).withEach { build ->
             def bo = build.object(); // build object
             if (!"Complete".equalsIgnoreCase(bo.status.phase)) {
                 error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
