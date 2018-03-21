@@ -5,15 +5,14 @@ import org.jenkinsci.plugins.workflow.cps.CpsScript;
 class OpenShiftHelper {
   
   def build(CpsScript script, Map __context) {
-    def body = {
-      echo "openShiftBuild:openshift1:${openshift.dump()}"
-      openshift.withCluster() {
-        echo "openShiftBuild:openshift2:${openshift.dump()}"
-        openshift.withProject(openshift.project()) {
+      script.echo "openShiftBuild:openshift1:${script.openshift.dump()}"
+      script.openshift.withCluster() {
+        echo "openShiftBuild:openshift2:${script.openshift.dump()}"
+        script.openshift.withProject(script.openshift.project()) {
           def models=[];
 
-          echo "openShiftBuild:openshift3:${openshift.dump()}"
-          echo "openShiftBuild: project:${openshift.project()}"
+          script.echo "openShiftBuild:openshift3:${script.openshift.dump()}"
+          script.echo "openShiftBuild: project:${script.openshift.project()}"
 
           if (__context.models!=null){
             __context.models.resolveStrategy = Closure.DELEGATE_FIRST;
@@ -26,7 +25,7 @@ class OpenShiftHelper {
 
           echo 'Processing template ...'
           
-          owner.applyBuildConfig(delegate);
+          applyBuildConfig(script);
 
           echo 'Creating/Updating Objects (from template)'
           //def builds=[];
@@ -34,22 +33,17 @@ class OpenShiftHelper {
           //openShiftWaitForBuilds(openshift, builds)
         }
       }
-    }
-    body.resolveStrategy = Closure.DELEGATE_FIRST;
-    body.delegate = script;
-    body();
-    //script.echo "OpenShiftHelper.build: Hello"
   }
   
   def applyBuildConfig(CpsScript script) {
-    def body = {
-      echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
-      echo "openShiftBuild:openshift2:${openshift.dump()}"
-    }
+    //def body = {
+      script.echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
+      script.echo "openShiftBuild:openshift2:${script.openshift.dump()}"
+    //} //end 'body 'closure
     
-    body.resolveStrategy = Closure.DELEGATE_FIRST;
-    body.delegate = script;
-    body();
+    //body.resolveStrategy = Closure.DELEGATE_FIRST;
+    //body.delegate = script;
+    //body();
     
     //def bcSelector=['app-name':appName, 'env-name':envName];
     //echo "Cancelling all pending builds"
