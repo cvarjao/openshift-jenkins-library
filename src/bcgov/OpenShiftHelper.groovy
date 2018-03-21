@@ -189,17 +189,17 @@ class OpenShiftHelper {
                         if (cn.equalsIgnoreCase(c.name)){
                             script.echo "${t.imageChangeParams.from}"
                             def dockerImageReference = '';
-                            def selector=_openshift.selector("istag/${t.imageChangeParams.from.name}");
+                            def selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
 
                             if (t.imageChangeParams.from['namespace']!=null && t.imageChangeParams.from['namespace'].length()>0){
-                                _openshift.withProject(t.imageChangeParams.from['namespace']) {
-                                    selector=_openshift.selector("istag/${t.imageChangeParams.from.name}");
+                                openshift.withProject(t.imageChangeParams.from['namespace']) {
+                                    selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
                                     if (selector.count() == 1 ){
                                         dockerImageReference=selector.object().image.dockerImageReference
                                     }
                                 }
                             }else{
-                                selector=_openshift.selector("istag/${t.imageChangeParams.from.name}");
+                                selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
                                 if (selector.count() == 1 ){
                                     dockerImageReference=selector.object().image.dockerImageReference
                                 }
