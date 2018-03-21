@@ -121,6 +121,11 @@ class OpenShiftHelper {
         //Wait for all builds to complete
         waitForBuildsWithSelector(openshift, openshift.selector(builds));
     }
+
+    def freeze(OpenShiftDSL openshift, selector) {
+        return openshift.selector(selector.names());
+    }
+
     def waitForBuildsWithSelector(OpenShiftDSL openshift, selector) {
         openshift.selector(selector.names()).watch {
             def build = it.object();
@@ -262,7 +267,7 @@ class OpenShiftHelper {
         script.echo 'Cancelling DeploymentConfigs'
         script.echo "${openshift.selector( 'dc', dcSelector).freeze().rollout().cancel()}"
         script.echo "Waiting for RCs to get cancelled"
-        openshift.selector( 'rc', dcSelector).narrow('rc').watch { rcs ->
+        freeze(openshift, openshift.selector( 'rc', dcSelector)).watch { rcs ->
             def allDone=true;
             rcs.withEach { rc ->
                 def o = rc.object();
