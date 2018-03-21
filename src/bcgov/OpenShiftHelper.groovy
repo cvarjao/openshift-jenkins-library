@@ -149,7 +149,7 @@ class OpenShiftHelper {
         def dcSuffix='-dev'
 
         if (metadata.isPullRequest){
-            context.envName = "pr-${metadata.pullRequestNumber}"
+            envName = "pr-${metadata.pullRequestNumber}"
             dcSuffix="-pr-${metadata.pullRequestNumber}"
         }
 
