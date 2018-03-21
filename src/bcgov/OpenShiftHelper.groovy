@@ -272,7 +272,7 @@ class OpenShiftHelper {
             def allDone=true;
             script.echo "Waiting for '${rcs.names()}'"
 
-            rcs.withEach { rc ->
+            rcs.freeze().withEach { rc ->
                 def o = rc.object();
                 def phase=o.metadata.annotations['openshift.io/deployment.phase']
                 if (!( 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))){
