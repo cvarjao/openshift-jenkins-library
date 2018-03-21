@@ -7,7 +7,7 @@ class OpenShiftHelper {
   def build(CpsScript script, Map __context) {
       script.echo "openShiftBuild:openshift1:${script.openshift.dump()}"
       script.openshift.withCluster() {
-        echo "openShiftBuild:openshift2:${script.openshift.dump()}"
+        script.echo "openShiftBuild:openshift2:${script.openshift.dump()}"
         script.openshift.withProject(script.openshift.project()) {
           def models=[];
 
