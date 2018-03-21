@@ -54,6 +54,8 @@ def call(body) {
                 when { expression { return true} }
                 steps {
                     script {
+                        OpenShiftHelper.build(this);
+                        
                         openShiftBuild(metadata, [
                             models: {
                                 return openshift.process("-f", "openshift.bc.json",
