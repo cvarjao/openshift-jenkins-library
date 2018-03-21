@@ -1,7 +1,10 @@
 
 def call(metadata, Map __context) {
+  echo "openShiftBuild:openshift1:${openshift.dump()}"
   openshift.withCluster() {
+    echo "openShiftBuild:openshift2:${openshift.dump()}"
     openshift.withProject(openshift.project()) {
+      echo "openShiftBuild:openshift3:${openshift.dump()}"
       echo "openShiftBuild: project:${openshift.project()}"
       
       def models=__context.models();
