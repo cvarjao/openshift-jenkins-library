@@ -1,11 +1,11 @@
 
 def call(metadata, Map __context) {
-  
   openshift.withCluster() {
-    openshift.withProject(_openshift.project()) {
-      echo "project:${_openshift.project()}"
+    openshift.withProject(openshift.project()) {
+      echo "openShiftBuild: project:${openshift.project()}"
+      
       def models=__context.models();
-      echo "models:${models.dump()}"
+      echo "openShiftBuild: models:${models.dump()}"
       
       echo 'Processing template ...'
       openShiftApplyBuildConfig(metadata.appName, metadata.buildEnvName, models)
