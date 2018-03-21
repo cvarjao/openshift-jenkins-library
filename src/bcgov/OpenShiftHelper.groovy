@@ -144,13 +144,12 @@ class OpenShiftHelper {
         def echo = script.echo
         Map metadata = context.metadata
 
-        def envName= context.envName
-        def dcPrefix=metadata.appName
-        def dcSuffix='-dev'
+        context.dcPrefix=metadata.appName
+        context.dcSuffix='-dev'
 
         if (metadata.isPullRequest){
-            envName = "pr-${metadata.pullRequestNumber}"
-            dcSuffix="-pr-${metadata.pullRequestNumber}"
+            context.envName = "pr-${metadata.pullRequestNumber}"
+            context.dcSuffix="-pr-${metadata.pullRequestNumber}"
         }
 
         openshift.withCluster() {
@@ -167,7 +166,7 @@ class OpenShiftHelper {
 
                     if (context.models != null) {
                         context.models.resolveStrategy = Closure.DELEGATE_FIRST;
-                        context.models.delegate = this;
+                        context.models.delegate = context + ['openshift':openshift];
                         models = context.models();
                     }
 
