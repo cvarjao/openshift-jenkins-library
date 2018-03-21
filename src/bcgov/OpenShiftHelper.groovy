@@ -260,7 +260,7 @@ class OpenShiftHelper {
             }
         }
 
-        script.echo "Cancelling:\n${openshift.selector( 'dc', dcSelector).rollout().cancel()}"
+        script.echo "Cancelling:\n${openshift.selector( 'dc', dcSelector).freeze().rollout().cancel()}"
         script.echo "Waiting for RCs to get cancelled"
         openshift.selector( 'rc', dcSelector).freeze().watch { rcs ->
             def allDone=true;
