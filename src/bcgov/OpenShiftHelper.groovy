@@ -1,11 +1,12 @@
 package bcgov;
 
 import org.jenkinsci.plugins.workflow.cps.CpsScript;
+import com.openshift.jenkins.plugins.OpenShiftDSL;
 
 class OpenShiftHelper {
 
     def build(CpsScript script, Map __context) {
-        def openshift=script.openshift;
+        OpenShiftDSL openshift=script.openshift;
 
         script.echo "openShiftBuild:openshift1:${openshift.dump()}"
         openshift.withCluster() {
@@ -38,7 +39,7 @@ class OpenShiftHelper {
         }
     }
 
-    def applyBuildConfig(CpsScript script, openshift, appName, envName, models) {
+    def applyBuildConfig(CpsScript script, OpenShiftDSL openshift, appName, envName, models) {
         //def body = {
         script.echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
         script.echo "openShiftBuild:openshift2:${openshift.dump()}"
@@ -52,17 +53,8 @@ class OpenShiftHelper {
         openshift.selector('bc', bcSelector).cancelBuild();
 
         script.echo "Waiting for all pending builds to complete or cancel"
-        openshift.selector('builds', bcSelector).watch {
-            if (it.count() == 0) return true
-            def allDone = true
-            it.withEach {
-                def buildModel = it.object()
-                if (it.object().status.phase != "Complete" && it.object().status.phase != "Failed") {
-                    allDone = false
-                }
-            }
-            return allDone;
-        }
+        waitForBuilds(openshift, openshift.selector('builds', bcSelector));
+
 
         script.echo "Applying ${models.size()} objects for '${appName}' for '${envName}'"
         for (o in models) {
@@ -91,7 +83,7 @@ class OpenShiftHelper {
     }
 
 
-    def startBuild(CpsScript script, openshift, baseSelector, commitId) {
+    def startBuild(CpsScript script, OpenShiftDSL openshift, baseSelector, commitId) {
         String buildNameSelector = null;
 
         def buildSelector = openshift.selector('builds', baseSelector + ['commit-id': "${commitId}"]);
@@ -125,9 +117,12 @@ class OpenShiftHelper {
     }
 
 
-    def waitForBuilds(CpsScript script, openshift, List builds) {
+    def waitForBuilds(CpsScript script, OpenShiftDSL openshift, List builds) {
         //Wait for all builds to complete
-        openshift.selector(builds).watch {
+        waitForBuilds(openshift, openshift.selector(builds));
+    }
+    def waitForBuilds(OpenShiftDSL openshift, OpenShiftDSL.OpenShiftResourceSelector selector) {
+        openshift.selector(selector.names()).watch {
             def build = it.object();
             def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
             if (!buildDone) {
@@ -136,12 +131,11 @@ class OpenShiftHelper {
             return buildDone;
         }
 
-        openshift.selector(builds).withEach { build ->
+        openshift.selector(selector.names()).withEach { build ->
             def bo = build.object(); // build object
             if (!"Complete".equalsIgnoreCase(bo.status.phase)) {
                 error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
             }
         }
     }
-
 }
