@@ -40,7 +40,15 @@ class OpenShiftHelper {
     //script.echo "OpenShiftHelper.build: Hello"
   }
   static def applyBuildConfig(CpsScript script) {
-    script.echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
+    def body = {
+      echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
+      echo "openShiftBuild:openshift2:${openshift.dump()}"
+    }
+    
+    body.resolveStrategy = Closure.DELEGATE_FIRST;
+    body.delegate = script;
+    body();
+    
     //def bcSelector=['app-name':appName, 'env-name':envName];
     //echo "Cancelling all pending builds"
     //openshift.selector( 'bc', bcSelector).cancelBuild();
