@@ -1,11 +1,11 @@
 
 def call(_openshift, metadata, Map __context) {
   
-  _openshift.withCluster() {
+  openshift.withCluster() {
     echo "project:${_openshift.project()}"
     echo "models:${__context.dump()}"
     def models=[];
-    _openshift.withProject(_openshift.project()) {
+    openshift.withProject(_openshift.project()) {
       if (__context.models!=null){
 //        __context.models.resolveStrategy = Closure.DELEGATE_FIRST
 //        __context.models.delegate = this
@@ -13,12 +13,12 @@ def call(_openshift, metadata, Map __context) {
       }
 
       echo 'Processing template ...'
-      openShiftApplyBuildConfig(_openshift, metadata.appName, metadata.buildEnvName, models)
+      openShiftApplyBuildConfig(openshift, metadata.appName, metadata.buildEnvName, models)
 
       echo 'Creating/Updating Objects (from template)'
       def builds=[];
-      builds.add(openShiftStartBuild(_openshift, ['app-name':metadata.appName, 'env-name':metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
-      openShiftWaitForBuilds(_openshift, builds)
+      builds.add(openShiftStartBuild(openshift, ['app-name':metadata.appName, 'env-name':metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
+      openShiftWaitForBuilds(openshift, builds)
     }
   }
 }
