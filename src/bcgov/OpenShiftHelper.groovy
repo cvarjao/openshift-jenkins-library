@@ -173,7 +173,7 @@ class OpenShiftHelper {
 
 
                     //script.echo "${models}"
-                    //openShiftApplyDeploymentConfig(openshift, buildProjectName, metadata.appName, context.envName, models, buildImageStreams)
+                    applyDeploymentConfig(script, openshift, buildProjectName, metadata.appName, context.envName, models, buildImageStreams)
 
                 } // end openshift.withProject()
             } // end openshift.withCredentials()
