@@ -74,8 +74,8 @@ def call(body) {
                 agent any
                 when { expression { return true} }
                 steps {
-                    echo 'Deploying'
                     script {
+                        echo 'Deploying'
                         /*
                         openShiftDeploy (metadata, {
                             projectName = 'csnr-devops-lab-deploy'
