@@ -1,5 +1,5 @@
 
-def call(_openshift, String appName, String envName, List models) {
+def call(String appName, String envName, List models) {
   def bcSelector=['app-name':appName, 'env-name':envName];
   
   echo "Cancelling all pending builds"
