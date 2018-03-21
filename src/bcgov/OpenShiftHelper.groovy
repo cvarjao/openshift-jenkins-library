@@ -172,7 +172,7 @@ class OpenShiftHelper {
                     }
 
 
-                    script.echo "${models}"
+                    //script.echo "${models}"
                     //openShiftApplyDeploymentConfig(openshift, buildProjectName, metadata.appName, context.envName, models, buildImageStreams)
 
                 } // end openshift.withProject()
@@ -180,4 +180,126 @@ class OpenShiftHelper {
         } // end openshift.withCluster()
     } // end 'deploy' method
 
-}
+
+    def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
+        for ( c in containers ) {
+            for ( t in triggers) {
+                if ('ImageChange'.equalsIgnoreCase(t['type'])){
+                    for ( cn in t.imageChangeParams.containerNames){
+                        if (cn.equalsIgnoreCase(c.name)){
+                            script.echo "${t.imageChangeParams.from}"
+                            def dockerImageReference = '';
+                            def selector=_openshift.selector("istag/${t.imageChangeParams.from.name}");
+
+                            if (t.imageChangeParams.from['namespace']!=null && t.imageChangeParams.from['namespace'].length()>0){
+                                _openshift.withProject(t.imageChangeParams.from['namespace']) {
+                                    selector=_openshift.selector("istag/${t.imageChangeParams.from.name}");
+                                    if (selector.count() == 1 ){
+                                        dockerImageReference=selector.object().image.dockerImageReference
+                                    }
+                                }
+                            }else{
+                                selector=_openshift.selector("istag/${t.imageChangeParams.from.name}");
+                                if (selector.count() == 1 ){
+                                    dockerImageReference=selector.object().image.dockerImageReference
+                                }
+                            }
+
+                            script.echo "ImageReference is '${dockerImageReference}'"
+                            c.image = "${dockerImageReference}";
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    def applyDeploymentConfig(CpsScript script, OpenShiftDSL openshift, String buildProjectName, String appName, String envName, List models, buildImageStreams) {
+        def dcSelector=['app-name':appName, 'env-name':envName];
+        def replicas=[:]
+        for ( m in models ) {
+            if ("DeploymentConfig".equals(m.kind)){
+                replicas[m.metadata.name]=m.spec.replicas
+                m.spec.replicas = 0
+                m.spec.paused = true
+                updateContainerImages(script, openshift, m.spec.template.spec.containers, m.spec.triggers);
+            }
+        }
+
+        //echo "Scaling down"
+        // openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
+        openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
+            def o = dc.object();
+            replicas[o.metadata.name]=o.spec.replicas
+            script.echo "'${dc.name()}'  paused=${o.spec.paused}"
+            if ( o.spec.paused == false ){
+                dc.rollout().pause()
+            }
+        }
+
+        script.echo "The template will create/update ${models.size()} objects"
+        //TODO: needs to review usage of 'apply' it recreates Secrets!!!
+        def selector=openshift.apply(models);
+        selector.label(['app':"${appName}-${envName}", 'app-name':"${appName}", 'env-name':"${envName}"], "--overwrite")
+
+        selector.narrow('is').withEach { imageStream ->
+            def o=imageStream.object();
+            def imageStreamName="${o.metadata.name}"
+
+            if (buildImageStreams[imageStreamName] != null ){
+                script.echo "Tagging '${buildProjectName}/${o.metadata.name}:latest' as '${o.metadata.name}:${envName}'"
+                openshift.tag("${buildProjectName}/${o.metadata.name}:latest", "${o.metadata.name}:${envName}")
+            }
+        }
+
+        openshift.selector( 'dc', dcSelector).withEach { dc ->
+            def o = dc.object();
+            script.echo "'${dc.name()}'  paused=${o.spec.paused}"
+            if (o.spec.paused == true){
+                dc.rollout().resume()
+            }
+        }
+
+        script.echo "Cancelling:\n${openshift.selector( 'dc', dcSelector).rollout().cancel()}"
+        script.echo "Waiting for RCs to get cancelled"
+        openshift.selector( 'rc', dcSelector).watch { rcs ->
+            def allDone=true;
+            rcs.withEach { rc ->
+                def o = rc.object();
+                def phase=o.metadata.annotations['openshift.io/deployment.phase']
+                if (!( 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))){
+                    allDone=false;
+                }
+            }
+            return allDone;
+        }
+
+        script.echo "Deployments:\n${openshift.selector( 'dc', dcSelector).rollout().latest()}"
+        openshift.selector( 'rc', dcSelector).watch { rcs ->
+            def allDone=true;
+            rcs.withEach { rc ->
+                def o = rc.object();
+                def phase=o.metadata.annotations['openshift.io/deployment.phase']
+                if (!( 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))){
+                    allDone=false;
+                }
+            }
+            return allDone;
+        }
+
+        script.echo 'Scaling-up application'
+        openshift.selector( 'dc', dcSelector).withEach { dc ->
+            def o=dc.object();
+            openshift.selector(dc.name()).scale("--replicas=${replicas[o.metadata.name]}", '--timeout=2m')
+        }
+
+        //openshift.selector("dc/nginx").rollout().resume()
+
+        //openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
+        //script.echo "deploy:\n${openshift.selector( 'dc', dcSelector).rollout().cancel()}"
+        //script.echo "deploy:\n${openshift.selector( 'dc', dcSelector).rollout().latest()}"
+        //script.echo "deploy:\n${openshift.selector( 'dc', dcSelector).rollout().status()}"
+        //openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
+    }
+
+} // end class
