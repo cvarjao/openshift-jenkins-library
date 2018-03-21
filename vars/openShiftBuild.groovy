@@ -1,12 +1,5 @@
 
-def call(_openshift, metadata, Closure body) {
-  def __context= [:]
-  
-  if (body!=null){
-    body.resolveStrategy = Closure.DELEGATE_FIRST
-    body.delegate = __context
-    body()
-  }
+def call(_openshift, metadata, Map __context) {
   
   _openshift.withCluster() {
     echo "project:${_openshift.project()}"
@@ -14,8 +7,8 @@ def call(_openshift, metadata, Closure body) {
     def models=[];
     _openshift.withProject(_openshift.project()) {
       if (__context.models!=null){
-        __context.models.resolveStrategy = Closure.DELEGATE_FIRST
-        __context.models.delegate = this
+//        __context.models.resolveStrategy = Closure.DELEGATE_FIRST
+//        __context.models.delegate = this
         models = __context.models();
       }
 
