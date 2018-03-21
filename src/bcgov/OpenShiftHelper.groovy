@@ -21,13 +21,13 @@ class OpenShiftHelper {
           }
 
 
-          echo "openShiftBuild: models:${models.dump()}"
+          script.echo "openShiftBuild: models:${models.dump()}"
 
-          echo 'Processing template ...'
+          script.echo 'Processing template ...'
           
           applyBuildConfig(script);
 
-          echo 'Creating/Updating Objects (from template)'
+          script.echo 'Creating/Updating Objects (from template)'
           //def builds=[];
           //builds.add(OpenShiftHelper.startBuild(openshift, ['app-name':metadata.appName, 'env-name':metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
           //openShiftWaitForBuilds(openshift, builds)
