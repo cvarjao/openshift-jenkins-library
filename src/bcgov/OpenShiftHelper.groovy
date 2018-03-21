@@ -121,7 +121,7 @@ class OpenShiftHelper {
         //Wait for all builds to complete
         waitForBuilds(openshift, openshift.selector(builds));
     }
-    def waitForBuilds(OpenShiftDSL openshift, OpenShiftDSL.OpenShiftResourceSelector selector) {
+    def waitForBuilds(OpenShiftDSL openshift, selector) {
         openshift.selector(selector.names()).watch {
             def build = it.object();
             def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
