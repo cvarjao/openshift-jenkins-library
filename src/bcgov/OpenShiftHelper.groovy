@@ -267,8 +267,11 @@ class OpenShiftHelper {
         script.echo 'Cancelling DeploymentConfigs'
         script.echo "${openshift.selector( 'dc', dcSelector).freeze().rollout().cancel()}"
         script.echo "Waiting for RCs to get cancelled"
-        openshift.selector( 'dc', dcSelector).related('rc').watch { rcs ->
+        openshift.verbose(true);
+        openshift.selector( 'rc', dcSelector).watch { rcs ->
             def allDone=true;
+            script.echo "Waiting for '${rcs.names()}'"
+
             rcs.withEach { rc ->
                 def o = rc.object();
                 def phase=o.metadata.annotations['openshift.io/deployment.phase']
