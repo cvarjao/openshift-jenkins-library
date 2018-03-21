@@ -10,7 +10,8 @@ class OpenShiftHelper {
         script.echo "openShiftBuild:openshift2:${script.openshift.dump()}"
         script.openshift.withProject(script.openshift.project()) {
           def models=[];
-
+          def metadata=__context.metadata;
+          
           script.echo "openShiftBuild:openshift3:${script.openshift.dump()}"
           script.echo "openShiftBuild: project:${script.openshift.project()}"
 
@@ -25,12 +26,12 @@ class OpenShiftHelper {
 
           script.echo 'Processing template ...'
           
-          applyBuildConfig(script, __context.metadata.appName, __context.metadata.buildEnvName, models);
+          applyBuildConfig(script, metadata.appName, metadata.buildEnvName, models);
 
           script.echo 'Creating/Updating Objects (from template)'
-          //def builds=[];
-          //builds.add(OpenShiftHelper.startBuild(openshift, ['app-name':metadata.appName, 'env-name':metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
-          //openShiftWaitForBuilds(openshift, builds)
+          def builds=[];
+          builds.add(startBuild(script, ['app-name':metadata.appName, 'env-name':metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
+          waitForBuilds(script, builds)
         }
       }
   }
@@ -87,5 +88,59 @@ class OpenShiftHelper {
     //def bcSelector=['app-name':appName, 'env-name':envName];
     //echo "Cancelling all pending builds"
     //openshift.selector( 'bc', bcSelector).cancelBuild();
+  }
+}
+
+
+def startBuild(CpsScript script, baseSelector, commitId) {
+  String buildNameSelector=null;
+  
+    def buildSelector = script.openshift.selector( 'builds', baseSelector + ['commit-id':"${commitId}"]);
+    if (buildSelector.count()==0){
+        script.echo "Starting new build for '${baseSelector}'"
+        buildSelector = script.openshift.selector( 'bc', baseSelector).startBuild("--commit=${commitId}")
+        script.echo "New build started - ${buildSelector.name()}"
+        buildSelector.label(['commit-id':"${commitId}"], "--overwrite")
+        buildNameSelector=buildSelector.name()
+        /*
+        buildSelector.logs('-f');        
+        openshift.selector("${buildSelector.name()}").watch {
+            def build=it.object();
+            return !"Running".equalsIgnoreCase(build.status.phase)
+        }
+        def build=openshift.selector("${buildSelector.name()}").object();
+        if (!"Complete".equalsIgnoreCase(build.status.phase)){
+            error "Build '${buildSelector.name()}' did not successfully complete (${build.status.phase})"
+        }
+        echo "OutputImageDigest: '${build.status.output.to.imageDigest}'"
+        echo "outputDockerImageReference: '${build.status.outputDockerImageReference}'"
+        */
+    }else{
+      buildNameSelector=buildSelector.name()
+      script.echo "Skipping new build. Reusing '${buildNameSelector}'"
+      //def build=buildSelector.object()
+      //echo "OutputImageDigest: '${build.status.output.to.imageDigest}'"
+      //echo "outputDockerImageReference: '${build.status.outputDockerImageReference}'"
+    }
+    return buildNameSelector;
+}
+
+
+def waitForBuilds(CpsScript script, List builds) {
+  //Wait for all builds to complete
+  script.openshift.selector(builds).watch {
+      def build=it.object();
+      def buildDone=("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
+      if (!buildDone){
+          echo "Waiting for '${it.name()}' (${build.status.phase})"
+      }
+      return buildDone;
+  }
+
+  script.selector(builds).withEach { build ->
+      def bo = build.object(); // build object
+      if (!"Complete".equalsIgnoreCase(bo.status.phase)){
+          error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
+      }
   }
 }
