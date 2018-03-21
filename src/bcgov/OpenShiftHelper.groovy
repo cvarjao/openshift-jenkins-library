@@ -26,7 +26,7 @@ class OpenShiftHelper {
 
           echo 'Processing template ...'
           
-          applyBuildConfig(delegate);
+          owner.applyBuildConfig(delegate);
 
           echo 'Creating/Updating Objects (from template)'
           //def builds=[];
