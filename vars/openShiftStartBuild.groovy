@@ -1,5 +1,5 @@
 
-def call(baseSelector, commitId) {
+def call(__openshift, baseSelector, commitId) {
   String buildNameSelector=null;
   
     def buildSelector = openshift.selector( 'builds', baseSelector + ['commit-id':"${commitId}"]);
