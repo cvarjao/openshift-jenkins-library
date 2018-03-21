@@ -9,6 +9,7 @@
 import hudson.model.Result;
 import jenkins.model.CauseOfInterruption.UserInterruption;
 import org.kohsuke.github.*;
+import bcgov.OpenShiftHelper;
 
 def call(body) {
     def pipelineParams= [:]
