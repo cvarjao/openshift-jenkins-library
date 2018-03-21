@@ -1,11 +1,11 @@
 
-def call(_openshift, baseSelector, commitId) {
+def call(baseSelector, commitId) {
   String buildNameSelector=null;
   
-    def buildSelector = _openshift.selector( 'builds', baseSelector + ['commit-id':"${commitId}"]);
+    def buildSelector = openshift.selector( 'builds', baseSelector + ['commit-id':"${commitId}"]);
     if (buildSelector.count()==0){
         echo "Starting new build for '${baseSelector}'"
-        buildSelector = _openshift.selector( 'bc', baseSelector).startBuild("--commit=${commitId}")
+        buildSelector = openshift.selector( 'bc', baseSelector).startBuild("--commit=${commitId}")
         echo "New build started - ${buildSelector.name()}"
         buildSelector.label(['commit-id':"${commitId}"], "--overwrite")
         buildNameSelector=buildSelector.name()
