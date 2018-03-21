@@ -2,10 +2,11 @@
 def call(_openshift, String appName, String envName, List models) {
   def bcSelector=['app-name':appName, 'env-name':envName];
   
+  echo "Cancelling all pending builds"
+  openshift.selector( 'bc', bcSelector).cancelBuild();
+  
   echo "Waiting for all pending builds to complete or cancel"
-  _openshift.selector( 'bc', bcSelector).cancelBuild();
-
-  _openshift.selector( 'builds', bcSelector).watch {
+  openshift.selector( 'builds', bcSelector).watch {
       if ( it.count() == 0 ) return true
       def allDone = true
       it.withEach {
@@ -32,5 +33,5 @@ def call(_openshift, String appName, String envName, List models) {
       }
       */
   }
-  _openshift.apply(models);
+  openshift.apply(models);
 }
