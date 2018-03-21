@@ -67,6 +67,7 @@ def call(body) {
                             }
                         ]);
                         
+                        /*
                         openShiftBuild(metadata, [
                             models: {
                                 return openshift.process("-f", "openshift.bc.json",
@@ -77,6 +78,7 @@ def call(body) {
                                     "-p", "GIT_REPO_URL=${metadata.gitRepoUrl}")
                             }
                         ]);
+                        */
                     } //end script
                 } //end steps
             } // end stage
