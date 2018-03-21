@@ -4,10 +4,18 @@ def call(metadata, Map __context) {
   openshift.withCluster() {
     echo "openShiftBuild:openshift2:${openshift.dump()}"
     openshift.withProject(openshift.project()) {
+      def models=[];
+      
       echo "openShiftBuild:openshift3:${openshift.dump()}"
       echo "openShiftBuild: project:${openshift.project()}"
       
-      def models=__context.models();
+      if (__context.models!=null){
+        __context.models.resolveStrategy = Closure.DELEGATE_FIRST;
+        __context.models.delegate = this;
+        models=__context.models();
+      }
+      
+      
       echo "openShiftBuild: models:${models.dump()}"
       
       echo 'Processing template ...'
