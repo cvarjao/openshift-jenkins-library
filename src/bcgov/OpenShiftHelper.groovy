@@ -4,7 +4,7 @@ import org.jenkinsci.plugins.workflow.cps.CpsScript;
 
 class OpenShiftHelper {
   
-  static def build(CpsScript script, Map __context) {
+  def build(CpsScript script, Map __context) {
     def body = {
       echo "openShiftBuild:openshift1:${openshift.dump()}"
       openshift.withCluster() {
@@ -40,7 +40,8 @@ class OpenShiftHelper {
     body();
     //script.echo "OpenShiftHelper.build: Hello"
   }
-  static def applyBuildConfig(CpsScript script) {
+  
+  def applyBuildConfig(CpsScript script) {
     def body = {
       echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
       echo "openShiftBuild:openshift2:${openshift.dump()}"
