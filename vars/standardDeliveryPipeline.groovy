@@ -56,7 +56,8 @@ def call(body) {
                 steps {
                     script {
                         new OpenShiftHelper().build(this,[
-                            models: {
+                            'metadata': metadata,
+                            'models': {
                                 return openshift.process("-f", "openshift.bc.json",
                                     "-p", "APP_NAME=${metadata.appName}",
                                     "-p", "ENV_NAME=${metadata.buildEnvName}",
