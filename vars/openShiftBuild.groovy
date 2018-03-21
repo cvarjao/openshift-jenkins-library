@@ -1,5 +1,5 @@
 
-def call(_openshift, metadata, Map __context) {
+def call(metadata, Map __context) {
   
   openshift.withCluster() {
     echo "project:${_openshift.project()}"
@@ -8,7 +8,7 @@ def call(_openshift, metadata, Map __context) {
       echo "models:${models.dump()}"
       
       echo 'Processing template ...'
-      openShiftApplyBuildConfig(openshift, metadata.appName, metadata.buildEnvName, models)
+      openShiftApplyBuildConfig(metadata.appName, metadata.buildEnvName, models)
 
       echo 'Creating/Updating Objects (from template)'
       def builds=[];
