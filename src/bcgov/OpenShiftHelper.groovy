@@ -154,7 +154,9 @@ class OpenShiftHelper {
         openshift.withCluster() {
             def buildProjectName="${openshift.project()}"
             def buildImageStreams=[:]
-            openshift.selector( 'is', ['app-name':metadata.appName, 'env-name':metadata.buildEnvName]).withEach {
+
+            echo "Collecting ImageStreams";
+            openshift.selector( 'is', ['app-name':metadata.appName, 'env-name':metadata.buildEnvName]).freeze().withEach {
                 buildImageStreams["${it.object().metadata.name}"]=true
             }
 
