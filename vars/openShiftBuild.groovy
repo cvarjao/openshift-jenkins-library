@@ -1,22 +1,22 @@
 
 def call(_openshift, metadata, Closure body) {
-  def context= [:]
+  def __context= [:]
   
   if (body!=null){
     body.resolveStrategy = Closure.DELEGATE_FIRST
-    body.delegate = context
+    body.delegate = __context
     body()
   }
   
   _openshift.withCluster() {
     echo "project:${_openshift.project()}"
-    echo "models:${context.dump()}"
+    echo "models:${__context.dump()}"
     def models=[];
     _openshift.withProject(_openshift.project()) {
-      if (context.models!=null){
-        context.models.resolveStrategy = Closure.DELEGATE_FIRST
-        context.models.delegate = this
-        models = context.models();
+      if (__context.models!=null){
+        __context.models.resolveStrategy = Closure.DELEGATE_FIRST
+        __context.models.delegate = this
+        models = __context.models();
       }
 
       echo 'Processing template ...'
