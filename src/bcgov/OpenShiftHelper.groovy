@@ -282,10 +282,11 @@ class OpenShiftHelper {
             return allDone;
         }
 
-        script.echo "Deployments:\n${openshift.selector( 'dc', dcSelector).rollout().latest()}"
-        openshift.selector( 'rc', dcSelector).freeze().watch { rcs ->
+        script.echo "Deployments:"
+        script.echo "${openshift.selector( 'dc', dcSelector).freeze().rollout().latest()}"
+        openshift.selector( 'rc', dcSelector).watch { rcs ->
             def allDone=true;
-            rcs.withEach { rc ->
+            rcs.freeze().withEach { rc ->
                 def o = rc.object();
                 def phase=o.metadata.annotations['openshift.io/deployment.phase']
                 if (!( 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))){
