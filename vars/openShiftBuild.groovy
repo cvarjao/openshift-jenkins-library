@@ -2,9 +2,9 @@
 def call(metadata, Map __context) {
   
   openshift.withCluster() {
-    echo "project:${_openshift.project()}"
-    def models=__context.models;
     openshift.withProject(_openshift.project()) {
+      echo "project:${_openshift.project()}"
+      def models=__context.models();
       echo "models:${models.dump()}"
       
       echo 'Processing template ...'
