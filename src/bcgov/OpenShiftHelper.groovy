@@ -25,7 +25,7 @@ class OpenShiftHelper {
 
           script.echo 'Processing template ...'
           
-          applyBuildConfig(script, script.metadata.appName, script.metadata.buildEnvName, models);
+          applyBuildConfig(script, __context.metadata.appName, __context.metadata.buildEnvName, models);
 
           script.echo 'Creating/Updating Objects (from template)'
           //def builds=[];
