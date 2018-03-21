@@ -76,7 +76,7 @@ def call(body) {
                 steps {
                     script {
                         echo 'Deploying'
-                        new OpenShiftHelper().build(this,[
+                        new OpenShiftHelper().deploy(this,[
                                 'projectName': 'csnr-devops-lab-deploy',
                                 'envName': "dev",
                                 'metadata': metadata,

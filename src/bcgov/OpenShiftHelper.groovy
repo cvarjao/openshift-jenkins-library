@@ -151,7 +151,7 @@ class OpenShiftHelper {
             context.envName = "pr-${metadata.pullRequestNumber}"
             context.dcSuffix="-pr-${metadata.pullRequestNumber}"
         }
-
+        echo "OpenShiftHelper.deploy: Deploying"
         openshift.withCluster() {
             def buildProjectName="${openshift.project()}"
             def buildImageStreams=[:]
