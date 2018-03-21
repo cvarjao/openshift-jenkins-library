@@ -54,7 +54,7 @@ def call(body) {
                 when { expression { return true} }
                 steps {
                     script {
-                        openShiftBuild(openshift, metadata, [
+                        openShiftBuild(metadata, [
                             models: openshift.process("-f", "openshift.bc.json",
                                     "-p", "APP_NAME=${metadata.appName}",
                                     "-p", "ENV_NAME=${metadata.buildEnvName}",
