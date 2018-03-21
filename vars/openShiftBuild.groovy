@@ -1,5 +1,5 @@
 
-def call(metadata, Closure body) {
+def call(_openshift, metadata, Closure body) {
   def context= [:]
   
   if (body!=null){
@@ -8,11 +8,11 @@ def call(metadata, Closure body) {
     body()
   }
   
-  openshift.withCluster() {
-    echo "project:${openshift.project()}"
+  _openshift.withCluster() {
+    echo "project:${_openshift.project()}"
     echo "models:${context.dump()}"
     def models=[];
-    openshift.withProject(openshift.project()) {
+    _openshift.withProject(_openshift.project()) {
       if (context.models!=null){
         context.models.resolveStrategy = Closure.DELEGATE_FIRST
         context.models.delegate = this
@@ -20,12 +20,12 @@ def call(metadata, Closure body) {
       }
 
       echo 'Processing template ...'
-      openShiftApplyBuildConfig(openshift, metadata.appName, metadata.buildEnvName, models)
+      openShiftApplyBuildConfig(_openshift, metadata.appName, metadata.buildEnvName, models)
 
       echo 'Creating/Updating Objects (from template)'
       def builds=[];
-      builds.add(openShiftStartBuild(openshift, ['app-name':metadata.appName, 'env-name':metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
-      openShiftWaitForBuilds(openshift, builds)
+      builds.add(openShiftStartBuild(_openshift, ['app-name':metadata.appName, 'env-name':metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
+      openShiftWaitForBuilds(_openshift, builds)
     }
   }
 }
