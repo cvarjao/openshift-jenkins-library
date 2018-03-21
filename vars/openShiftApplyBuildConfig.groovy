@@ -2,6 +2,8 @@
 def call(String appName, String envName, List models) {
   def bcSelector=['app-name':appName, 'env-name':envName];
   
+  echo "openShiftApplyBuildConfig:openshift1:${openshift.dump()}"
+  
   echo "Cancelling all pending builds"
   openshift.selector( 'bc', bcSelector).cancelBuild();
   
