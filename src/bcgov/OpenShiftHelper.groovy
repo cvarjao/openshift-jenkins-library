@@ -53,7 +53,7 @@ class OpenShiftHelper {
         openshift.selector('bc', bcSelector).cancelBuild();
 
         script.echo "Waiting for all pending builds to complete or cancel"
-        waitForBuilds(openshift, openshift.selector('builds', bcSelector));
+        waitForBuildsWithSelector(openshift, openshift.selector('builds', bcSelector));
 
 
         script.echo "Applying ${models.size()} objects for '${appName}' for '${envName}'"
@@ -119,9 +119,9 @@ class OpenShiftHelper {
 
     def waitForBuilds(CpsScript script, OpenShiftDSL openshift, List builds) {
         //Wait for all builds to complete
-        waitForBuilds(openshift, openshift.selector(builds));
+        waitForBuildsWithSelector(openshift, openshift.selector(builds));
     }
-    def waitForBuilds(OpenShiftDSL openshift, selector) {
+    def waitForBuildsWithSelector(OpenShiftDSL openshift, selector) {
         openshift.selector(selector.names()).watch {
             def build = it.object();
             def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
@@ -137,5 +137,45 @@ class OpenShiftHelper {
                 error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
             }
         }
-    }
+    } // end method
+
+    def deploy(CpsScript script, Map context) {
+        OpenShiftDSL openshift=script.openshift
+        def echo = script.echo
+        Map metadata = context.metadata
+        context.dcPrefix=metadata.appName
+        context.dcSuffix='-dev'
+
+        if (metadata.isPullRequest){
+            context.envName = "pr-${metadata.pullRequestNumber}"
+            context.dcSuffix="-pr-${metadata.pullRequestNumber}"
+        }
+
+        openshift.withCluster() {
+            def buildProjectName="${openshift.project()}"
+            def buildImageStreams=[:]
+            openshift.selector( 'is', ['app-name':metadata.appName, 'env-name':metadata.buildEnvName]).withEach {
+                buildImageStreams["${it.object().metadata.name}"]=true
+            }
+
+            echo "buildImageStreams:${buildImageStreams}"
+            openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
+                openshift.withProject( context.projectName ) {
+                    def models = [];
+
+                    if (context.models != null) {
+                        context.models.resolveStrategy = Closure.DELEGATE_FIRST;
+                        context.models.delegate = this;
+                        models = context.models();
+                    }
+
+
+                    echo "${models}"
+                    //openShiftApplyDeploymentConfig(openshift, buildProjectName, metadata.appName, context.envName, models, buildImageStreams)
+
+                } // end openshift.withProject()
+            } // end openshift.withCredentials()
+        } // end openshift.withCluster()
+    } // end 'deploy' method
+
 }
