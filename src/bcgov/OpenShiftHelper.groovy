@@ -25,7 +25,7 @@ class OpenShiftHelper {
           echo "openShiftBuild: models:${models.dump()}"
 
           echo 'Processing template ...'
-          OpenShiftHelper.applyBuildConfig(this);
+          OpenShiftHelper.applyBuildConfig(delegate);
 
           echo 'Creating/Updating Objects (from template)'
           //def builds=[];
