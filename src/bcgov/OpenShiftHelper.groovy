@@ -21,9 +21,10 @@ class OpenShiftHelper {
                 script.echo "metadata:\n${metadata}"
 
                 if (__context.models != null) {
-                    def code =__context.models.rehydrate(script, __context, this)
+                    /* delegate, owner, thisObject */
+                    def code =__context.models.rehydrate(__context, script, script)
                     code.resolveStrategy = Closure.DELEGATE_FIRST;
-                    code.delegate = __context
+                    //code.delegate = __context
                     models = code()
                 }
 
