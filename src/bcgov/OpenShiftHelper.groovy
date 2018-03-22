@@ -179,12 +179,18 @@ class OpenShiftHelper {
                 openshift.withProject( context.projectName ) {
                     def models = [];
 
+                    File dcScriptFactoryFile=new File(script.pwd(), 'openshift.dc.groovy');
+                    script.echo "bcScriptFactoryFile:${dcScriptFactoryFile.getText()}"
+
+                    models = Eval.me(dcScriptFactoryFile.getText())
+                    
+                    /*
                     if (context.models != null) {
                         def code =context.models.dehydrate().rehydrate( context  + ['openshift':openshift], script, this)
                         code.resolveStrategy = Closure.DELEGATE_ONLY
                         models=code()
                     }
-
+                    */
 
                     //script.echo "${models}"
                     applyDeploymentConfig(script, openshift, buildProjectName, metadata.appName, context.envName, models, buildImageStreams)
