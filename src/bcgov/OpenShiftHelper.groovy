@@ -190,11 +190,17 @@ class OpenShiftHelper {
                         //script.echo "rawModelsDefs.dump():${rawModelsDefs.dump()}"
                         for (def template:modelsDef){
                             def params=[]
+                            def firstParam= null ;
                             for (def param:template){
-                                params.add(processStringTemplate(param, context))
+                                if (firstParam==null){
+                                    firstParam=processStringTemplate(param, context)
+                                }else {
+                                    params.add(processStringTemplate(param, context))
+                                }
 
                             }
-                            models.addAll(openshift.process(params))
+                            script.echo "params:${params}"
+                            models.addAll(openshift.process(firstParam, params))
                         }
 
                         /*
@@ -222,6 +228,7 @@ class OpenShiftHelper {
         def engine = new groovy.text.GStringTemplateEngine()
         return engine.createTemplate(template).make(bindings).toString()
     }
+
     def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
         for ( c in containers ) {
             for ( t in triggers) {
