@@ -165,6 +165,7 @@ class OpenShiftHelper {
             context.envName = "pr-${metadata.pullRequestNumber}"
             context.dcSuffix="-pr-${metadata.pullRequestNumber}"
         }
+
         script.echo "OpenShiftHelper.deploy: Deploying"
         openshift.withCluster() {
             def buildProjectName="${openshift.project()}"
@@ -180,6 +181,8 @@ class OpenShiftHelper {
                 openshift.withProject( context.projectName ) {
                     def models = [];
 
+                    context.buildProject=buildProjectName
+                    context.deployProject=context.projectName
 
                     if (context.models != null) {
                         //def code =context.models.dehydrate().rehydrate( context  + ['openshift':openshift], script, this)
@@ -188,7 +191,7 @@ class OpenShiftHelper {
                         def modelsDef = context.models
                         //script.echo "rawModelsDefs:${rawModelsDefs}"
                         //script.echo "rawModelsDefs.dump():${rawModelsDefs.dump()}"
-                        def bindings = context  + ['openshift':openshift]
+                        def bindings = context
                         for (def template:modelsDef){
                             def params=[]
                             def firstParam= null ;
