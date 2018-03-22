@@ -191,7 +191,7 @@ class OpenShiftHelper {
                         for (def template:modelsDef){
                             def params=[]
                             for (def param:template){
-                                params.add(processStringTemplate(param))
+                                params.add(processStringTemplate(param, context))
 
                             }
                             models.addAll(openshift.process(params))
