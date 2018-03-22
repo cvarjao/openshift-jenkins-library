@@ -24,23 +24,19 @@ class OpenShiftHelper {
                 script.echo "metadata:\n${metadata}"
 
                 if (__context.models != null) {
-                    /* delegate, owner, thisObject */
-                    // TO_SELF
-                    // DELEGATE_ONLY
-                    def code =__context.models.dehydrate().rehydrate(['metadata':metadata, 'openshift':openshift], script, this)
-                    code.resolveStrategy = Closure.DELEGATE_ONLY
-                    //code.delegate = __context
-                    models = code()
+                    def modelsDef = __context.models
+                    def bindings = __context
+                    for (def template:modelsDef){
+                        def params=processStringTemplate(template, bindings);
+                        models.addAll(openshift.process(params.remove(0), params))
+                    }
                 }
 
-
-                script.echo "openShiftBuild: models:${models.dump()}"
-
-                script.echo 'Processing template ...'
+                //script.echo 'Processing template ...'
 
                 applyBuildConfig(script, openshift, metadata.appName, metadata.buildEnvName, models);
 
-                script.echo 'Creating/Updating Objects (from template)'
+                //script.echo 'Creating/Updating Objects (from template)'
                 def builds = [];
                 builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
                 waitForBuilds(script, openshift, builds)
@@ -185,37 +181,13 @@ class OpenShiftHelper {
                     context.deployProject=context.projectName
 
                     if (context.models != null) {
-                        //def code =context.models.dehydrate().rehydrate( context  + ['openshift':openshift], script, this)
-                        //code.resolveStrategy = Closure.DELEGATE_ONLY
-                        //script.echo "code:${code.dump()}"
                         def modelsDef = context.models
-                        //script.echo "rawModelsDefs:${rawModelsDefs}"
-                        //script.echo "rawModelsDefs.dump():${rawModelsDefs.dump()}"
                         def bindings = context
                         for (def template:modelsDef){
-                            def params=[]
-                            def firstParam= null ;
-                            for (def param:template){
-                                if (firstParam==null){
-                                    firstParam=processStringTemplate(param, bindings)
-                                }else {
-                                    params.add(processStringTemplate(param, bindings))
-                                }
+                            def params=processStringTemplate(template, bindings);
 
-                            }
-                            script.echo "params:${params}"
-                            models.addAll(openshift.process(firstParam, params))
+                            models.addAll(openshift.process(params.remove(0), params))
                         }
-
-                        /*
-                        modelsDef.putAll();
-                        script.echo "modelsDef:${modelsDef}"
-
-                        for (def template:modelsDef){
-                            script.echo "template:${template}"
-                            models.addAll(openshift.process(template))
-                        }
-                        */
                     }
 
 
@@ -231,6 +203,16 @@ class OpenShiftHelper {
     def processStringTemplate(String template, Map bindings) {
         def engine = new groovy.text.GStringTemplateEngine()
         return engine.createTemplate(template).make(bindings).toString()
+    }
+
+    @NonCPS
+    def processStringTemplate(List params, Map bindings) {
+        def engine = new groovy.text.GStringTemplateEngine()
+        def ret=[]
+        for (def param:template) {
+            ret.add(engine.createTemplate(template).make(bindings).toString())
+        }
+        return ret
     }
 
     def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
