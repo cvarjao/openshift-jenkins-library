@@ -22,7 +22,7 @@ class OpenShiftHelper {
                     def code =__context.models.rehydrate(script, __context, this)
                     code.resolveStrategy = Closure.DELEGATE_FIRST;
                     //__context.models.delegate = this;
-                    //models = __context.models();
+                    models = code();
                 }
 
 
