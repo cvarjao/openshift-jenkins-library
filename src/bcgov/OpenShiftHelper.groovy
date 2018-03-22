@@ -209,8 +209,8 @@ class OpenShiftHelper {
     def processStringTemplate(List params, Map bindings) {
         def engine = new groovy.text.GStringTemplateEngine()
         def ret=[]
-        for (def param:template) {
-            ret.add(engine.createTemplate(template).make(bindings).toString())
+        for (def param:params) {
+            ret.add(engine.createTemplate(param).make(bindings).toString())
         }
         return ret
     }
