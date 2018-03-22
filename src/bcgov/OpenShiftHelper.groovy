@@ -185,13 +185,17 @@ class OpenShiftHelper {
                         //def code =context.models.dehydrate().rehydrate( context  + ['openshift':openshift], script, this)
                         //code.resolveStrategy = Closure.DELEGATE_ONLY
                         //script.echo "code:${code.dump()}"
-
-                        def rawModelsDefs = context.models
-                        def modelsDef = []
-                        script.echo "rawModelsDefs:${rawModelsDefs}"
-                        script.echo "rawModelsDefs.dump():${rawModelsDefs.dump()}"
+                        def engine = new groovy.text.GStringTemplateEngine()
+                        def modelsDef = context.models
+                        //script.echo "rawModelsDefs:${rawModelsDefs}"
+                        //script.echo "rawModelsDefs.dump():${rawModelsDefs.dump()}"
                         for (def template:modelsDef){
-                            script.echo "template:${template}"
+                            def params=[]
+                            for (def param:template){
+                                params.add(engine.createTemplate(param).make(context).toString())
+
+                            }
+                            models.addAll(openshift.process(params))
                         }
 
                         /*
@@ -206,7 +210,7 @@ class OpenShiftHelper {
                     }
 
 
-                    //script.echo "${models}"
+                    script.echo "DeployModels:${models}"
                     applyDeploymentConfig(script, openshift, buildProjectName, metadata.appName, context.envName, models, buildImageStreams)
 
                 } // end openshift.withProject()
