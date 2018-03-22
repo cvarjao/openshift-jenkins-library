@@ -153,6 +153,7 @@ class OpenShiftHelper {
         }
     } // end method
 
+
     def deploy(CpsScript script, Map context) {
         OpenShiftDSL openshift=script.openshift
         Map metadata = context.metadata
@@ -183,7 +184,10 @@ class OpenShiftHelper {
                     if (context.models != null) {
                         def code =context.models.dehydrate().rehydrate( context  + ['openshift':openshift], script, this)
                         code.resolveStrategy = Closure.DELEGATE_ONLY
-                        for (def template:code()){
+                        def modelsDef=[] << code();
+                        script.echo "modelsDef:${modelsDef}"
+
+                        for (def template:modelsDef){
                             script.echo "template:${template}"
                             models.addAll(openshift.process(template))
                         }
