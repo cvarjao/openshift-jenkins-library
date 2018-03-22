@@ -55,17 +55,9 @@ def call(body) {
                 when { expression { return true} }
                 steps {
                     script {
-                        def bcModels= { return []}
-                        if (pipelineParams.bcModels != null){
-                            if (pipelineParams.bcModels instanceof Closure){
-                                bcModels=pipelineParams.bcModels
-                            }
-                        }
-
-
                         new OpenShiftHelper().build(this,[
                             'metadata': metadata,
-                            'models': bcModels
+                            'models': pipelineParams.bcModels
                         ]);
 
                     } //end script
@@ -81,20 +73,7 @@ def call(body) {
                                 'projectName': 'csnr-devops-lab-deploy',
                                 'envName': "dev",
                                 'metadata': metadata,
-                                'models': {
-                                    return [] + openshift.process(
-                                            'openshift//mysql-ephemeral',
-                                            "-p", "DATABASE_SERVICE_NAME=${dcPrefix}-db${dcSuffix}",
-                                            '-p', "MYSQL_DATABASE=petclinic"
-                                    ) + openshift.process("-f", "openshift.dc.json",
-                                            "-p", "APP_NAME=${metadata.appName}",
-                                            "-p", "ENV_NAME=${envName}",
-                                            "-p", "NAME_PREFIX=${dcPrefix}",
-                                            "-p", "NAME_SUFFIX=${dcSuffix}",
-                                            "-p", "BC_PROJECT=${openshift.project()}",
-                                            "-p", "DC_PROJECT=${openshift.project()}"
-                                    )
-                                }
+                                'models': pipelineParams.dcModels
                         ]);
 
                         /*
