@@ -9,7 +9,7 @@ class OpenShiftHelper {
         OpenShiftDSL openshift=script.openshift;
 
         File bcScriptFactoryFile=new File(script.pwd(), 'openshift.bc.groovy');
-        script.echo "bcScriptFactoryFile:${bcScriptFactoryFile.text()}"
+        script.echo "bcScriptFactoryFile:${bcScriptFactoryFile.getText()}"
         script.echo "openShiftBuild:openshift1:${openshift.dump()}"
         openshift.withCluster() {
             script.echo "openShiftBuild:openshift2:${openshift.dump()}"
