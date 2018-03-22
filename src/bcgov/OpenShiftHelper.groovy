@@ -179,7 +179,7 @@ class OpenShiftHelper {
                 openshift.withProject( context.projectName ) {
                     def models = [];
 
-                    if (__context.models != null) {
+                    if (context.models != null) {
                         def code =__context.models.dehydrate().rehydrate( context  + ['openshift':openshift], script, this)
                         code.resolveStrategy = Closure.DELEGATE_ONLY
                     }
