@@ -18,6 +18,8 @@ class OpenShiftHelper {
                 script.echo "openShiftBuild:openshift3:${openshift.dump()}"
                 script.echo "openShiftBuild: project:${openshift.project()}"
 
+                script.echo "metadata:\n${metadata}"
+
                 if (__context.models != null) {
                     def code =__context.models.rehydrate(script, __context, this)
                     code.resolveStrategy = Closure.DELEGATE_FIRST;
