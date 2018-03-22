@@ -185,14 +185,13 @@ class OpenShiftHelper {
                         //def code =context.models.dehydrate().rehydrate( context  + ['openshift':openshift], script, this)
                         //code.resolveStrategy = Closure.DELEGATE_ONLY
                         //script.echo "code:${code.dump()}"
-                        def engine = new groovy.text.GStringTemplateEngine()
                         def modelsDef = context.models
                         //script.echo "rawModelsDefs:${rawModelsDefs}"
                         //script.echo "rawModelsDefs.dump():${rawModelsDefs.dump()}"
                         for (def template:modelsDef){
                             def params=[]
                             for (def param:template){
-                                params.add(engine.createTemplate(param).make(context).toString())
+                                params.add(processStringTemplate(param))
 
                             }
                             models.addAll(openshift.process(params))
@@ -218,7 +217,11 @@ class OpenShiftHelper {
         } // end openshift.withCluster()
     } // end 'deploy' method
 
-
+    @NonCPS
+    def processStringTemplate(String template, Map bindings) {
+        def engine = new groovy.text.GStringTemplateEngine()
+        return engine.createTemplate(template).make(bindings).toString()
+    }
     def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
         for ( c in containers ) {
             for ( t in triggers) {
