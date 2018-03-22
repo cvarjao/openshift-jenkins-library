@@ -8,8 +8,9 @@ class OpenShiftHelper {
     def build(CpsScript script, Map __context) {
         OpenShiftDSL openshift=script.openshift;
 
-        File bcScriptFactoryFile=new File(script.pwd(), 'openshift.bc.groovy');
-        script.echo "bcScriptFactoryFile:${bcScriptFactoryFile.getText()}"
+        //File bcScriptFactoryFile=new File(script.pwd(), 'openshift.bc.groovy');
+        //script.echo "bcScriptFactoryFile:${bcScriptFactoryFile.getText()}"
+
         script.echo "openShiftBuild:openshift1:${openshift.dump()}"
         openshift.withCluster() {
             script.echo "openShiftBuild:openshift2:${openshift.dump()}"
@@ -23,22 +24,11 @@ class OpenShiftHelper {
                 script.echo "metadata:\n${metadata}"
 
                 if (__context.models != null) {
-                    ByteArrayOutputStream out = new ByteArrayOutputStream()
-                    ObjectOutputStream oos = new ObjectOutputStream(out)
-                    oos.writeObject(__context.models.dehydrate())
-                    oos.close()
-
-                    InputStream is = new ByteArrayInputStream(out.toByteArray())
-                    ObjectInputStream ois = new ObjectInputStream(is)
-
-                    // return back what's read from the stream
-                    def code = ois.readObject()
-                    code=code.dehydrate().rehydrate(['metadata':metadata, 'openshift':openshift], script, code)
                     /* delegate, owner, thisObject */
                     // TO_SELF
                     // DELEGATE_ONLY
-                    //def code =__context.models.dehydrate().rehydrate(['metadata':metadata, 'openshift':openshift], script, this)
-                    //code.resolveStrategy = Closure.DELEGATE_ONLY
+                    def code =__context.models.dehydrate().rehydrate(['metadata':metadata, 'openshift':openshift], script, this)
+                    code.resolveStrategy = Closure.DELEGATE_ONLY
                     //code.delegate = __context
                     models = code()
                 }
