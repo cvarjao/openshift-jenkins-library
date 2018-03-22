@@ -57,7 +57,7 @@ def call(body) {
                     script {
                         def bcModels= { return []}
 
-                        if (pipelineParams.bcModels == null){
+                        if (pipelineParams.bcModels != null){
                             if (pipelineParams.bcModels instanceof Closure){
                                 bcModels=pipelineParams.bcModels
                             }
