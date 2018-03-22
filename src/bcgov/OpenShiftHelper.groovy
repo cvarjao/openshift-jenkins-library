@@ -243,8 +243,13 @@ class OpenShiftHelper {
         }
 
         script.echo "The template will create/update ${models.size()} objects"
-        //TODO: needs to review usage of 'apply' it recreates Secrets!!!
-        def selector=openshift.apply(models);
+        //TODO: needs to review usage of 'apply', it recreates Secrets!!!
+        def secrets=models.findAll();
+        def configSets=models.findAll();
+        def others=models.findAll();
+
+        def selector=openshift.apply(others);
+
         selector.label(['app':"${appName}-${envName}", 'app-name':"${appName}", 'env-name':"${envName}"], "--overwrite")
 
         selector.narrow('is').withEach { imageStream ->
