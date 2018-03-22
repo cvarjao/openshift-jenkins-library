@@ -182,8 +182,10 @@ class OpenShiftHelper {
                     File dcScriptFactoryFile=new File(script.pwd(), 'openshift.dc.groovy');
                     script.echo "bcScriptFactoryFile:${dcScriptFactoryFile.getText()}"
 
-                    models = Eval.me(dcScriptFactoryFile.getText())
-                    
+                    def code = Eval.me("{-> ${dcScriptFactoryFile.getText()} }").rehydrate( context  + ['openshift': openshift], script, this)
+                    code.resolveStrategy = Closure.DELEGATE_ONLY
+                    models=code()
+
                     /*
                     if (context.models != null) {
                         def code =context.models.dehydrate().rehydrate( context  + ['openshift':openshift], script, this)
