@@ -28,7 +28,7 @@ class OpenShiftHelper {
                     // TO_SELF
                     // DELEGATE_ONLY
                     def code =__context.models.dehydrate().rehydrate(__context, script, this)
-                    code.resolveStrategy = Closure.DELEGATE_ONLY
+                    code.resolveStrategy = Closure.DELEGATE_FIRST
                     //code.delegate = __context
                     models = code()
                 }
@@ -181,7 +181,7 @@ class OpenShiftHelper {
 
                     if (__context.models != null) {
                         def code =__context.models.dehydrate().rehydrate(context, script, this)
-                        code.resolveStrategy = Closure.DELEGATE_ONLY
+                        code.resolveStrategy = Closure.DELEGATE_FIRST
                         //code.delegate = __context
                         models = code()
                     }
