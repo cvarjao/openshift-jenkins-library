@@ -182,15 +182,17 @@ class OpenShiftHelper {
 
 
                     if (context.models != null) {
-                        def code =context.models.dehydrate().rehydrate( context  + ['openshift':openshift], script, this)
-                        code.resolveStrategy = Closure.DELEGATE_ONLY
-                        script.echo "code:${code.dump()}"
+                        //def code =context.models.dehydrate().rehydrate( context  + ['openshift':openshift], script, this)
+                        //code.resolveStrategy = Closure.DELEGATE_ONLY
+                        //script.echo "code:${code.dump()}"
 
-                        def rawModelsDefs = code()
+                        def rawModelsDefs = context.models
                         def modelsDef = []
                         script.echo "rawModelsDefs:${rawModelsDefs}"
                         script.echo "rawModelsDefs.dump():${rawModelsDefs.dump()}"
-                        modelsDef.putAll(rawModelsDefs)
+                        for (def template:modelsDef){
+                            script.echo "template:${template}"
+                        }
 
                         /*
                         modelsDef.putAll();
