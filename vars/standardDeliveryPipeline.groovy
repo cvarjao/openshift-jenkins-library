@@ -56,12 +56,12 @@ def call(body) {
                 steps {
                     script {
                         def bcModels= { return []}
-
                         if (pipelineParams.bcModels != null){
                             if (pipelineParams.bcModels instanceof Closure){
                                 bcModels=pipelineParams.bcModels
                             }
                         }
+
 
                         new OpenShiftHelper().build(this,[
                             'metadata': metadata,

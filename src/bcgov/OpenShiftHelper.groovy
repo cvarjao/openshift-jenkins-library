@@ -19,9 +19,10 @@ class OpenShiftHelper {
                 script.echo "openShiftBuild: project:${openshift.project()}"
 
                 if (__context.models != null) {
-                    __context.models.resolveStrategy = Closure.DELEGATE_FIRST;
-                    __context.models.delegate = this;
-                    models = __context.models();
+                    def code =__context.models.rehydrate(script, __context, this)
+                    code.resolveStrategy = Closure.DELEGATE_FIRST;
+                    //__context.models.delegate = this;
+                    //models = __context.models();
                 }
 
 
