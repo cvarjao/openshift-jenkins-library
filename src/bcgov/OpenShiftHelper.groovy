@@ -188,14 +188,15 @@ class OpenShiftHelper {
                         def modelsDef = context.models
                         //script.echo "rawModelsDefs:${rawModelsDefs}"
                         //script.echo "rawModelsDefs.dump():${rawModelsDefs.dump()}"
+                        def bindings = context  + ['openshift':openshift]
                         for (def template:modelsDef){
                             def params=[]
                             def firstParam= null ;
                             for (def param:template){
                                 if (firstParam==null){
-                                    firstParam=processStringTemplate(param, context)
+                                    firstParam=processStringTemplate(param, bindings)
                                 }else {
-                                    params.add(processStringTemplate(param, context))
+                                    params.add(processStringTemplate(param, bindings))
                                 }
 
                             }
