@@ -55,9 +55,12 @@ class OpenShiftHelper {
         script.echo "openShiftApplyBuildConfig:openshift1:${openshift.dump()}"
 
         script.echo "Cancelling all pending builds"
-        openshift.selector('bc', bcSelector).cancelBuild();
+        if (openshift.selector('bc', bcSelector).count() >0 ){
+            openshift.selector('bc', bcSelector).cancelBuild();
+        }
 
         script.echo "Waiting for all pending builds to complete or cancel"
+        
         waitForBuildsWithSelector(openshift, openshift.selector('builds', bcSelector));
 
 
@@ -132,19 +135,21 @@ class OpenShiftHelper {
     }
 
     def waitForBuildsWithSelector(OpenShiftDSL openshift, selector) {
-        openshift.selector(selector.names()).watch {
-            def build = it.object();
-            def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
-            if (!buildDone) {
-                echo "Waiting for '${it.name()}' (${build.status.phase})"
+        if (openshift.selector(selector.names()).count() > 0){
+            openshift.selector(selector.names()).watch {
+                def build = it.object();
+                def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
+                if (!buildDone) {
+                    echo "Waiting for '${it.name()}' (${build.status.phase})"
+                }
+                return buildDone;
             }
-            return buildDone;
-        }
 
-        openshift.selector(selector.names()).withEach { build ->
-            def bo = build.object(); // build object
-            if (!"Complete".equalsIgnoreCase(bo.status.phase)) {
-                error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
+            openshift.selector(selector.names()).withEach { build ->
+                def bo = build.object(); // build object
+                if (!"Complete".equalsIgnoreCase(bo.status.phase)) {
+                    error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
+                }
             }
         }
     } // end method
