@@ -127,20 +127,20 @@ class OpenShiftHelper {
 
     def waitForBuilds(CpsScript script, OpenShiftDSL openshift, List builds) {
         //Wait for all builds to complete
-        waitForBuildsWithSelector(openshift, openshift.selector(builds));
+        waitForBuildsWithSelector(script, openshift, openshift.selector(builds));
     }
 
     def freeze(OpenShiftDSL openshift, selector) {
         return openshift.selector(selector.names());
     }
 
-    def waitForBuildsWithSelector(OpenShiftDSL openshift, selector) {
+    def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
         if (openshift.selector(selector.names()).count() > 0){
             openshift.selector(selector.names()).watch {
                 def build = it.object();
                 def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
                 if (!buildDone) {
-                    echo "Waiting for '${it.name()}' (${build.status.phase})"
+                    script.echo "Waiting for '${it.name()}' (${build.status.phase})"
                 }
                 return buildDone;
             }
@@ -148,7 +148,7 @@ class OpenShiftHelper {
             openshift.selector(selector.names()).withEach { build ->
                 def bo = build.object(); // build object
                 if (!"Complete".equalsIgnoreCase(bo.status.phase)) {
-                    error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
+                    script.error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
                 }
             }
         }
