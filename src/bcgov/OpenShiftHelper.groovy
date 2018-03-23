@@ -61,7 +61,7 @@ class OpenShiftHelper {
 
         script.echo "Waiting for all pending builds to complete or cancel"
         
-        waitForBuildsWithSelector(openshift, openshift.selector('builds', bcSelector));
+        waitForBuildsWithSelector(script, openshift, openshift.selector('builds', bcSelector));
 
 
         script.echo "Applying ${models.size()} objects for '${appName}' for '${envName}'"
