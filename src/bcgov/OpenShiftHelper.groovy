@@ -160,7 +160,7 @@ class OpenShiftHelper {
         waitForBuildsWithSelector(script, openshift, openshift.selector('builds', bcSelector));
 
 
-        script.echo "Applying ${models.size()} objects for '${appName}' for '${envName}'"
+        script.echo "Processing ${models.size()} objects for '${appName}' for '${envName}'"
         def creations=[]
         def updates=[]
         for (o in models) {
@@ -175,7 +175,7 @@ class OpenShiftHelper {
             }else{
                 if (!'ImageStream'.equalsIgnoreCase("${o.kind}")){
                     script.echo "Updating '${o.kind}/${o.metadata.name}'"
-                    updates.add(updates);
+                    updates.add(o);
                 }else{
                     script.echo "Skipping '${o.kind}/${o.metadata.name}' (Already Exists)"
                 }
@@ -184,9 +184,11 @@ class OpenShiftHelper {
         }
 
         if (creations.size()>0){
+            script.echo "Creating ${creations.size()} objects"
             openshift.apply(creations);
         }
         if (updates.size()>0){
+            script.echo "Updating ${updates.size()} objects"
             openshift.apply(updates);
         }
 
