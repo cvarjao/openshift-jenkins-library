@@ -37,8 +37,29 @@ class OpenShiftHelper {
                 applyBuildConfig(script, openshift, metadata.appName, metadata.buildEnvName, models);
 
                 //script.echo 'Creating/Updating Objects (from template)'
-                def builds = [];
-                builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
+                def builds = []
+                for (m in models) {
+                    if ('BuildConfig'.equalsIgnoreCase(m.kind)){
+                        String commitId = metadata.commit
+                        if (m.spec && m.spec.source && m.spec.source.contextDir && !'/'.equals(m.spec.source.contextDir)){
+                            commitId=sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${m.spec.source.contextDir.substring(1)}'").trim()
+                        }
+
+                        def buildSelector = openshift.selector('builds', ['openshift.io/build-config.name': "${m.metadata.name}", 'commit-id': "${commitId}"])
+
+                        if (buildSelector==null || buildSelector.count() == 0) {
+                            script.echo "Starting new build for 'bc/${m.metadata.name}' with commit ${commitId}"
+                            buildSelector = openshift.selector("bc/${m.metadata.name}").startBuild("--commit=${commitId}")
+                            script.echo "New build started - ${buildSelector.name()}"
+                            buildSelector.label(['commit-id': "${commitId}"], "--overwrite")
+                            builds.add(buildSelector.name())
+                        } else {
+                            builds.add(buildSelector.name())
+                            script.echo "Skipping new build. Reusing '${buildSelector.name()}'"
+                        }
+                    }
+                }
+                //builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
                 waitForBuilds(script, openshift, builds)
             }
         }
