@@ -130,8 +130,8 @@ class OpenShiftHelper {
                 //builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
                 waitForBuilds(script, openshift, builds)
                 script.echo "Checking for Deferred Builds (ImageChange trigger)"
-                while(_defferedBuilds.count()>0){
-                    for (def m in _defferedBuilds){
+                while(_defferedBuilds.size()>0){
+                    for (def m :  _defferedBuilds){
                         script.echo "Waiting for 'bc/${m.metadata.name}'"
                     }
                     script.sleep 10
