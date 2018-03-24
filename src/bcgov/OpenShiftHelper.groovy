@@ -43,6 +43,7 @@ class OpenShiftHelper {
 
                 for (m in models) {
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
+                        script.echo "Processing 'bc/${m.metadata.name}'"
                         String commitId = metadata.commit
                         if (m.spec && m.spec.source && m.spec.source.contextDir && !'/'.equals(m.spec.source.contextDir)){
                             commitId=script.sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${m.spec.source.contextDir.substring(1)}'").trim()
@@ -108,6 +109,8 @@ class OpenShiftHelper {
                         }
                     }
                 }
+
+                script.echo "Waiting for builds to complete"
                 //builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
                 waitForBuilds(script, openshift, builds)
                 while(_defferedBuilds.count()>0){
