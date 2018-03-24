@@ -216,6 +216,17 @@ class OpenShiftHelper {
 
     def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
         if (openshift.selector(selector.names()).count() > 0){
+
+            openshift.selector(selector.names()).withEach { sel ->
+                //build=sel.object();
+                //def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
+
+                openshift.selector(sel.name()).watch {
+                    def build = it.object();
+                    return ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase) || "Failed".equalsIgnoreCase(build.status.phase))
+                }
+            }
+            /*
             openshift.selector(selector.names()).watch {
                 def build = it.object();
                 def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
@@ -224,7 +235,7 @@ class OpenShiftHelper {
                 }
                 return buildDone;
             }
-
+            */
             openshift.selector(selector.names()).withEach { build ->
                 def bo = build.object(); // build object
                 if (!"Complete".equalsIgnoreCase(bo.status.phase)) {
