@@ -42,7 +42,7 @@ class OpenShiftHelper {
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
                         String commitId = metadata.commit
                         if (m.spec && m.spec.source && m.spec.source.contextDir && !'/'.equals(m.spec.source.contextDir)){
-                            commitId=sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${m.spec.source.contextDir.substring(1)}'").trim()
+                            commitId=script.sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${m.spec.source.contextDir.substring(1)}'").trim()
                         }
 
                         def buildSelector = openshift.selector('builds', ['openshift.io/build-config.name': "${m.metadata.name}", 'commit-id': "${commitId}"])
