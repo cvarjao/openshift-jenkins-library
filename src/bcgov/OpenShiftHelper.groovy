@@ -229,8 +229,19 @@ class OpenShiftHelper {
 
     def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
         if (openshift.selector(selector.names()).count() > 0){
-            def queue = []
 
+            openshift.selector(selector.names()).withEach { build ->
+                script.echo "Checking status of '${build.name()}'"
+                if (!isBuildComplete(build.object())){
+                    build.watch {
+                        return isBuildComplete(it.object())
+                    }
+                }
+            }
+
+
+            /*
+            def queue = []
             queue.addAll(selector.names())
 
             while (queue.count()>0){
@@ -243,7 +254,7 @@ class OpenShiftHelper {
                 }
                 queue.remove(0)
             }
-
+            */
             openshift.selector(selector.names()).withEach { build ->
                 def bo = build.object() // build object
                 if (!isBuildSuccesful(bo)) {
