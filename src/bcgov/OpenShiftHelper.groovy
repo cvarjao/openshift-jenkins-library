@@ -38,6 +38,9 @@ class OpenShiftHelper {
 
                 //script.echo 'Creating/Updating Objects (from template)'
                 def builds = []
+
+                def _defferedBuilds=[]
+
                 for (m in models) {
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
                         String commitId = metadata.commit
@@ -45,22 +48,74 @@ class OpenShiftHelper {
                             commitId=script.sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${m.spec.source.contextDir.substring(1)}'").trim()
                         }
 
-                        def buildSelector = openshift.selector('builds', ['openshift.io/build-config.name': "${m.metadata.name}", 'commit-id': "${commitId}"])
+                        def hasImageChangeTrigger=false
+                        def hasConfigChangeTrigger=false
+                        def startNewBuild=true
 
-                        if (buildSelector==null || buildSelector.count() == 0) {
-                            script.echo "Starting new build for 'bc/${m.metadata.name}' with commit ${commitId}"
-                            buildSelector = openshift.selector("bc/${m.metadata.name}").startBuild("--commit=${commitId}")
-                            script.echo "New build started - ${buildSelector.name()}"
-                            buildSelector.label(['commit-id': "${commitId}"], "--overwrite")
-                            builds.add(buildSelector.name())
-                        } else {
-                            builds.add(buildSelector.name())
-                            script.echo "Skipping new build. Reusing '${buildSelector.name()}'"
+                        if (m.spec.triggers){
+                            for (def trigger:m.spec.triggers){
+                                if ('ImageChange'.equalsIgnoreCase(trigger.type)){
+                                    hasImageChangeTrigger=true
+                                }else if ('ConfigChange'.equalsIgnoreCase(trigger.type)){
+                                    hasConfigChangeTrigger=true
+                                }
+                            }
+                        }
+
+                        if (hasConfigChangeTrigger) {
+                            openshift.set(['triggers', "bc/${m.metadata.name}", '--from-config', '--remove'])
+                        }
+                        openshift.selector("bc/${m.metadata.name}").patch('\'{"spec":{"source":{"git":{"ref": "'+commitId+'"}}}}\'')
+                        if (hasConfigChangeTrigger) {
+                            openshift.set(['triggers', "bc/${m.metadata.name}", '--from-config'])
+                        }
+
+                        if (hasImageChangeTrigger &&
+                                m.spec.strategy!=null &&
+                                m.spec.strategy.sourceStrategy!=null &&
+                                m.spec.strategy.sourceStrategy.from!=null &&
+                                m.spec.strategy.sourceStrategy.from.namespace == null &&
+                                'ImageStreamTag'.equalsIgnoreCase(m.spec.strategy.sourceStrategy.from.kind)){
+                            for (def m1 in models) {
+                                if ('BuildConfig'.equalsIgnoreCase(m1.kind) &&
+                                        m1.spec.output.to!=null &&
+                                        m1.spec.output.to.namespace==null &&
+                                        'ImageStreamTag'.equalsIgnoreCase(m1.spec.output.to.kind) &&
+                                        m1.spec.output.to.name.equalsIgnoreCase(m.spec.strategy.sourceStrategy.from.name)
+                                ){
+                                    startNewBuild=false
+                                    _defferedBuilds.add(openshift.selector("bc/${m.metadata.name}").object())
+                                    break
+                                }
+                            }
+                        }
+
+                        if (startNewBuild==true) {
+                            def buildSelector = openshift.selector('builds', ['openshift.io/build-config.name': "${m.metadata.name}", 'commit-id': "${commitId}"])
+
+                            if (buildSelector == null || buildSelector.count() == 0) {
+                                script.echo "Starting new build for 'bc/${m.metadata.name}' with commit ${commitId}"
+                                buildSelector = openshift.selector("bc/${m.metadata.name}").startBuild("--commit=${commitId}")
+                                script.echo "New build started - ${buildSelector.name()}"
+                                buildSelector.label(['commit-id': "${commitId}"], "--overwrite")
+                                builds.add(buildSelector.name())
+                            } else {
+                                builds.add(buildSelector.name())
+                                script.echo "Skipping new build. Reusing '${buildSelector.name()}'"
+                            }
+                        }else{
+                            script.echo "Build for 'bc/${m.metadata.name}' has been deferred"
                         }
                     }
                 }
                 //builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
                 waitForBuilds(script, openshift, builds)
+                while(_defferedBuilds.count()>0){
+                    for (def m in _defferedBuilds){
+                        script.echo "Waiting for 'bc/${m.metadata.name}'"
+                    }
+                    script.sleep 10
+                }
             }
         }
     }
