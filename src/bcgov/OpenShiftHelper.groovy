@@ -229,7 +229,10 @@ class OpenShiftHelper {
 
     def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
         if (openshift.selector(selector.names()).count() > 0){
-            def queue = [] + selector.names()
+            def queue = []
+
+            queue.addAll(selector.names())
+
             while (queue.count()>0){
                 def item=queue[0]
                 script.echo "Checking status of '${item}'"
