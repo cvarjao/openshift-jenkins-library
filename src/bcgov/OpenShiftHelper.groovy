@@ -228,7 +228,10 @@ class OpenShiftHelper {
     }
 
     def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
-        def names=selector.names()
+        //no-op
+    }
+    def __waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
+        //def names=selector.names()
         if (names.count() > 0){
             for (String name:names){
                 script.echo "Checking status of '${name}'"
