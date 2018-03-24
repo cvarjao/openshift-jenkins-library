@@ -161,22 +161,34 @@ class OpenShiftHelper {
 
 
         script.echo "Applying ${models.size()} objects for '${appName}' for '${envName}'"
+        def creations=[]
+        def updates=[]
         for (o in models) {
-            script.echo "Processing '${o.kind}/${o.metadata.name}'"
+            script.echo "Processing '${o.kind}/${o.metadata.name}' (before apply)"
             if (o.metadata.labels==null) o.metadata.labels =[:]
             o.metadata.labels["app"] = "${appName}-${envName}"
-            /*
-        def sel=openshift.selector("${o.kind}/${o.metadata.name}");
-        if (sel.count()==0){
-            echo "Creating '${o.kind}/${o.metadata.name}"
-            openshift.create([o]);
-        }else{
-            echo "Patching '${o.kind}/${o.metadata.name}"
-            openshift.apply(o);
+
+            def sel=openshift.selector("${o.kind}/${o.metadata.name}");
+            if (sel.count()==0){
+                echo "Creating '${o.kind}/${o.metadata.name}'"
+                creations.add(o);
+            }else{
+                if (!'ImageStream'.equalsIgnoreCase("${o.kind}")){
+                    echo "Updating '${o.kind}/${o.metadata.name}'"
+                    updates.add(updates);
+                }else{
+                    echo "Skipping '${o.kind}/${o.metadata.name}' (Already Exists)"
+                }
+            }
+
         }
-        */
+
+        if (creations.size()>0){
+            openshift.apply(creations);
         }
-        openshift.apply(models);
+        if (updates.size()>0){
+            openshift.apply(updates);
+        }
 
         //body.resolveStrategy = Closure.DELEGATE_FIRST;
         //body.delegate = script;
