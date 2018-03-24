@@ -92,7 +92,13 @@ class OpenShiftHelper {
                         }
 
                         if (startNewBuild==true) {
-                            def buildSelector = openshift.selector('builds', ['openshift.io/build-config.name': "${m.metadata.name}", 'commit-id': "${commitId}"])
+                            def buildSelector = null
+                            
+                            openshift.selector('builds', ['openshift.io/build-config.name': "${m.metadata.name}", 'commit-id': "${commitId}"]).withEach{ build ->
+                                if (isBuildSuccesful(build.object())){
+                                    buildSelector=openshift.selector(build.name())
+                                }
+                            }
 
                             if (buildSelector == null || buildSelector.count() == 0) {
                                 script.echo "Starting new build for 'bc/${m.metadata.name}' with commit ${commitId}"
@@ -175,25 +181,13 @@ class OpenShiftHelper {
         String buildNameSelector = null;
 
         def buildSelector = openshift.selector('builds', baseSelector + ['commit-id': "${commitId}"]);
+
         if (buildSelector.count() == 0) {
             script.echo "Starting new build for '${baseSelector}'"
             buildSelector = openshift.selector('bc', baseSelector).startBuild("--commit=${commitId}")
             script.echo "New build started - ${buildSelector.name()}"
             buildSelector.label(['commit-id': "${commitId}"], "--overwrite")
             buildNameSelector = buildSelector.name()
-            /*
-        buildSelector.logs('-f');        
-        openshift.selector("${buildSelector.name()}").watch {
-            def build=it.object();
-            return !"Running".equalsIgnoreCase(build.status.phase)
-        }
-        def build=openshift.selector("${buildSelector.name()}").object();
-        if (!"Complete".equalsIgnoreCase(build.status.phase)){
-            error "Build '${buildSelector.name()}' did not successfully complete (${build.status.phase})"
-        }
-        echo "OutputImageDigest: '${build.status.output.to.imageDigest}'"
-        echo "outputDockerImageReference: '${build.status.outputDockerImageReference}'"
-        */
         } else {
             buildNameSelector = buildSelector.name()
             script.echo "Skipping new build. Reusing '${buildNameSelector}'"
@@ -214,6 +208,14 @@ class OpenShiftHelper {
         return openshift.selector(selector.names());
     }
 
+    def isBuildComplete(build) {
+        return ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase) || "Failed".equalsIgnoreCase(build.status.phase))
+    }
+
+    def isBuildSuccesful(build) {
+        return "Complete".equalsIgnoreCase(build.status.phase)
+    }
+
     def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
         if (openshift.selector(selector.names()).count() > 0){
 
@@ -222,8 +224,7 @@ class OpenShiftHelper {
                 //def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
 
                 openshift.selector(sel.name()).watch {
-                    def build = it.object();
-                    return ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase) || "Failed".equalsIgnoreCase(build.status.phase))
+                    return isBuildComplete(it.object())
                 }
             }
             /*
@@ -237,8 +238,8 @@ class OpenShiftHelper {
             }
             */
             openshift.selector(selector.names()).withEach { build ->
-                def bo = build.object(); // build object
-                if (!"Complete".equalsIgnoreCase(bo.status.phase)) {
+                def bo = build.object() // build object
+                if (!isBuildSuccesful(bo)) {
                     script.error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
                 }
             }
