@@ -129,6 +129,7 @@ class OpenShiftHelper {
                 script.echo "Waiting for builds to complete"
                 //builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
                 waitForBuilds(script, openshift, builds)
+                script.echo "Checking for Deferred Builds (ImageChange trigger)"
                 while(_defferedBuilds.count()>0){
                     for (def m in _defferedBuilds){
                         script.echo "Waiting for 'bc/${m.metadata.name}'"
@@ -228,25 +229,18 @@ class OpenShiftHelper {
 
     def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
         if (openshift.selector(selector.names()).count() > 0){
-
-            openshift.selector(selector.names()).withEach { sel ->
-                //build=sel.object();
-                //def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
-
-                openshift.selector(sel.name()).watch {
-                    return isBuildComplete(it.object())
+            def queue = [] + selector.names()
+            while (queue.count()>0){
+                def item=queue[0]
+                script.echo "Checking status of '${item}'"
+                if (!isBuildComplete(openshift.selector(item).object())){
+                    openshift.selector(item).watch {
+                        return isBuildComplete(it.object())
+                    }
                 }
+                queue.remove(0)
             }
-            /*
-            openshift.selector(selector.names()).watch {
-                def build = it.object();
-                def buildDone = ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase))
-                if (!buildDone) {
-                    script.echo "Waiting for '${it.name()}' (${build.status.phase})"
-                }
-                return buildDone;
-            }
-            */
+
             openshift.selector(selector.names()).withEach { build ->
                 def bo = build.object() // build object
                 if (!isBuildSuccesful(bo)) {
