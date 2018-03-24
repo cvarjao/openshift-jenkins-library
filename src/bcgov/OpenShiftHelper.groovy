@@ -227,12 +227,12 @@ class OpenShiftHelper {
         return "Complete".equalsIgnoreCase(build.status.phase)
     }
 
-    def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
+    def __waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
         //no-op
     }
-    def __waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
+    def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
         //def names=selector.names()
-        if (names.count() > 0){
+        if (names.size() > 0){
             for (String name:names){
                 script.echo "Checking status of '${name}'"
                 openshift.selector(name).watch {
