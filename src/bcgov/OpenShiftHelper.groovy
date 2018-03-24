@@ -167,6 +167,8 @@ class OpenShiftHelper {
             script.echo "Processing '${o.kind}/${o.metadata.name}' (before apply)"
             if (o.metadata.labels==null) o.metadata.labels =[:]
             o.metadata.labels["app"] = "${appName}-${envName}"
+            o.metadata.labels["app-name"] = "${appName}"
+            o.metadata.labels["env-name"] = "${envName}"
 
             def sel=openshift.selector("${o.kind}/${o.metadata.name}");
             if (sel.count()==0){
