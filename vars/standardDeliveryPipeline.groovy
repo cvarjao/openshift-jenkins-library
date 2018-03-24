@@ -17,7 +17,7 @@ def call(body) {
     body.delegate = pipelineParams
     body()
 
-    def metadata=['appName':'spring-petclinic'];
+    def metadata=['appName':pipelineParams.name];
     
 
     pipeline {
