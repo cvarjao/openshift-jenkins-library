@@ -4,6 +4,32 @@ import org.jenkinsci.plugins.workflow.cps.CpsScript;
 import com.openshift.jenkins.plugins.OpenShiftDSL;
 
 class OpenShiftHelper {
+    @NonCPS
+    def getImageChangeTriggerBuildConfig(m, models) {
+        if (m.spec.triggers){
+            for (def trigger:m.spec.triggers){
+                if ('ImageChange'.equalsIgnoreCase(trigger.type)){
+                    if (m.spec.strategy!=null &&
+                            m.spec.strategy.sourceStrategy!=null &&
+                            m.spec.strategy.sourceStrategy.from!=null &&
+                            m.spec.strategy.sourceStrategy.from.namespace == null &&
+                            'ImageStreamTag'.equalsIgnoreCase(m.spec.strategy.sourceStrategy.from.kind)){
+                        for (def m1 in models) {
+                            if ('BuildConfig'.equalsIgnoreCase(m1.kind) &&
+                                    m1.spec.output.to!=null &&
+                                    m1.spec.output.to.namespace==null &&
+                                    'ImageStreamTag'.equalsIgnoreCase(m1.spec.output.to.kind) &&
+                                    m1.spec.output.to.name.equalsIgnoreCase(m.spec.strategy.sourceStrategy.from.name)
+                            ){
+                                return m1
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null
+    }
 
     def build(CpsScript script, Map __context) {
         OpenShiftDSL openshift=script.openshift;
@@ -33,17 +59,8 @@ class OpenShiftHelper {
                 }
 
                 //script.echo 'Processing template ...'
-
-                applyBuildConfig(script, openshift, metadata.appName, metadata.buildEnvName, models);
-
-                //script.echo 'Creating/Updating Objects (from template)'
-                def builds = []
-
-                def _defferedBuilds=[]
-
                 for (m in models) {
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
-                        script.echo "Processing 'bc/${m.metadata.name}'"
                         String commitId = metadata.commit
                         String contextDir=null
 
@@ -58,21 +75,54 @@ class OpenShiftHelper {
                         if (contextDir!=null){
                             commitId=script.sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${contextDir}'").trim()
                         }
+                        if (!m.metadata.annotations) m.metadata.annotations=[:]
+                        if (m.spec.source.git.ref) m.metadata.annotations['source/spec.source.git.ref']=m.spec.source.git.ref
 
-                        def hasImageChangeTrigger=false
-                        def hasConfigChangeTrigger=false
+                        m.metadata.annotations['spec.source.git.ref']=commitId
+                        //Disable ConfigChange trigger
+                        /*
+                        if (m.spec.triggers){
+                            def newTriggers=[]
+                            m.metadata.annotations['source/spec.triggers'] = toJsonString(m.spec.triggers)
+                            for(def trigger:m.spec.triggers){
+                                if (!'ConfigChange'.equalsIgnoreCase(trigger.type)){
+                                    newTriggers.add(trigger)
+                                }
+                            }
+                            m.spec.triggers=newTriggers
+                        }
+                        */
+                        m.spec.source.git.ref=commitId
+                        //script.echo "Setting commit '${m.spec.source.git.ref}' for 'bc/${m.metadata.name}'"
+                    }
+                }
+
+                applyBuildConfig(script, openshift, metadata.appName, metadata.buildEnvName, models);
+                //Wait 10 seconds for triggers to kick in
+                script.sleep 10
+
+                //script.echo 'Creating/Updating Objects (from template)'
+                def builds = []
+
+                def _deferredBuilds=[]
+
+                for (m in models) {
+                    if ('BuildConfig'.equalsIgnoreCase(m.kind)){
+                        script.echo "Processing 'bc/${m.metadata.name}'"
+                        String commitId = m.metadata.annotations['spec.source.git.ref']
+
                         def startNewBuild=true
 
+
+                        /*
+                        def hasConfigChangeTrigger=false
                         if (m.spec.triggers){
                             for (def trigger:m.spec.triggers){
-                                if ('ImageChange'.equalsIgnoreCase(trigger.type)){
-                                    hasImageChangeTrigger=true
-                                }else if ('ConfigChange'.equalsIgnoreCase(trigger.type)){
+                                if ('ConfigChange'.equalsIgnoreCase(trigger.type)){
                                     hasConfigChangeTrigger=true
                                 }
                             }
                         }
-
                         if (hasConfigChangeTrigger) {
                             openshift.set(['triggers', "bc/${m.metadata.name}", '--from-config', '--remove'])
                         }
@@ -80,25 +130,11 @@ class OpenShiftHelper {
                         if (hasConfigChangeTrigger) {
                             openshift.set(['triggers', "bc/${m.metadata.name}", '--from-config'])
                         }
-
-                        if (hasImageChangeTrigger &&
-                                m.spec.strategy!=null &&
-                                m.spec.strategy.sourceStrategy!=null &&
-                                m.spec.strategy.sourceStrategy.from!=null &&
-                                m.spec.strategy.sourceStrategy.from.namespace == null &&
-                                'ImageStreamTag'.equalsIgnoreCase(m.spec.strategy.sourceStrategy.from.kind)){
-                            for (def m1 in models) {
-                                if ('BuildConfig'.equalsIgnoreCase(m1.kind) &&
-                                        m1.spec.output.to!=null &&
-                                        m1.spec.output.to.namespace==null &&
-                                        'ImageStreamTag'.equalsIgnoreCase(m1.spec.output.to.kind) &&
-                                        m1.spec.output.to.name.equalsIgnoreCase(m.spec.strategy.sourceStrategy.from.name)
-                                ){
-                                    startNewBuild=false
-                                    _defferedBuilds.add(openshift.selector("bc/${m.metadata.name}").object())
-                                    break
-                                }
-                            }
+                        */
+                        def sourceBuildConfig=getImageChangeTriggerBuildConfig(m, models)
+                        if (sourceBuildConfig!=null){
+                            _deferredBuilds.add(openshift.selector("bc/${m.metadata.name}").object())
+                            startNewBuild=false
                         }
 
                         if (startNewBuild==true) {
@@ -115,6 +151,7 @@ class OpenShiftHelper {
                                 buildSelector = openshift.selector("bc/${m.metadata.name}").startBuild("--commit=${commitId}")
                                 script.echo "New build started - ${buildSelector.name()}"
                                 buildSelector.label(['commit-id': "${commitId}"], "--overwrite")
+                                m.status.newBuild=buildSelector.name()
                                 builds.add(buildSelector.name())
                             } else {
                                 builds.add(buildSelector.name())
@@ -126,15 +163,27 @@ class OpenShiftHelper {
                     }
                 }
 
-                script.echo "Waiting for builds to complete"
-                //builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
-                waitForBuilds(script, openshift, builds)
-                script.echo "Checking for Deferred Builds (ImageChange trigger)"
-                while(_defferedBuilds.size()>0){
-                    for (def m :  _defferedBuilds){
-                        script.echo "Waiting for 'bc/${m.metadata.name}'"
+                while(builds.size()>0) {
+                    script.echo "Waiting for builds to complete"
+                    //builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
+                    waitForBuilds(script, openshift, builds)
+                    builds.clear()
+                    script.sleep 10 //wait for triggers to kick in
+                    for (m in models) {
+                        if ('BuildConfig'.equalsIgnoreCase(m.kind)){
+                            def o=openshift.selector("bc/${m.metadata.name}").object(exportable:true)
+                            def buildName="build/${m.metadata.name}-${o.status.lastVersion}"
+                            def build=openshift.selector("build/${m.metadata.name}-${o.status.lastVersion}")
+                            if (build.count()>0){
+                                def bo=build.object(exportable:true)
+                                if (!isBuildComplete(bo)){
+                                    if (!builds.contains(buildName)){
+                                        builds.add(buildName)
+                                    }
+                                }
+                            }
+                        }
                     }
-                    script.sleep 10
                 }
             }
         }
@@ -339,6 +388,10 @@ class OpenShiftHelper {
             } // end openshift.withCredentials()
         } // end openshift.withCluster()
     } // end 'deploy' method
+    @NonCPS
+    def toJsonString(object) {
+        return new groovy.json.JsonBuilder(object).toPrettyString()
+    }
 
     @NonCPS
     def processStringTemplate(String template, Map bindings) {
