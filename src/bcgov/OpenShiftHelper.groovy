@@ -45,8 +45,18 @@ class OpenShiftHelper {
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
                         script.echo "Processing 'bc/${m.metadata.name}'"
                         String commitId = metadata.commit
-                        if (m.spec && m.spec.source && m.spec.source.contextDir && !'/'.equals(m.spec.source.contextDir)){
-                            commitId=script.sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${m.spec.source.contextDir.substring(1)}'").trim()
+                        String contextDir=null
+
+                        if (m.spec && m.spec.source && m.spec.source.contextDir){
+                            contextDir=m.spec.source.contextDir
+                        }
+
+                        if (contextDir!=null && contextDir.startsWith('/') && !contextDir.equalsIgnoreCase('/')){
+                            contextDir=contextDir.substring(1)
+                        }
+
+                        if (contextDir!=null){
+                            commitId=script.sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${contextDir}'").trim()
                         }
 
                         def hasImageChangeTrigger=false
@@ -93,7 +103,7 @@ class OpenShiftHelper {
 
                         if (startNewBuild==true) {
                             def buildSelector = null
-                            
+
                             openshift.selector('builds', ['openshift.io/build-config.name': "${m.metadata.name}", 'commit-id': "${commitId}"]).withEach{ build ->
                                 if (isBuildSuccesful(build.object())){
                                     buildSelector=openshift.selector(build.name())
