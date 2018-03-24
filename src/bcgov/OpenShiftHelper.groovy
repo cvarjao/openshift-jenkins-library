@@ -170,14 +170,14 @@ class OpenShiftHelper {
 
             def sel=openshift.selector("${o.kind}/${o.metadata.name}");
             if (sel.count()==0){
-                echo "Creating '${o.kind}/${o.metadata.name}'"
+                script.echo "Creating '${o.kind}/${o.metadata.name}'"
                 creations.add(o);
             }else{
                 if (!'ImageStream'.equalsIgnoreCase("${o.kind}")){
-                    echo "Updating '${o.kind}/${o.metadata.name}'"
+                    script.echo "Updating '${o.kind}/${o.metadata.name}'"
                     updates.add(updates);
                 }else{
-                    echo "Skipping '${o.kind}/${o.metadata.name}' (Already Exists)"
+                    script.echo "Skipping '${o.kind}/${o.metadata.name}' (Already Exists)"
                 }
             }
 
