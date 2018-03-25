@@ -387,6 +387,7 @@ class OpenShiftHelper {
                     script.echo "DeployModels:${models}"
                     applyDeploymentConfig(script, openshift, buildProjectName, metadata.appName, context.envName, models, buildImageStreams)
 
+
                 } // end openshift.withProject()
             } // end openshift.withCredentials()
         } // end openshift.withCluster()
@@ -532,7 +533,11 @@ class OpenShiftHelper {
             def o=dc.object();
             openshift.selector(dc.name()).scale("--replicas=${replicas[o.metadata.name]}", '--timeout=2m')
         }
-
+        script.echo 'Waiting for pods to become ready'
+        openshift.selector( 'dc', dcSelector).watch{ dc ->
+            def o=dc.object()
+            return o.status && o.status.readyReplicas == replicas[o.metadata.name]
+        }
         //openshift.selector("dc/nginx").rollout().resume()
 
         //openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
