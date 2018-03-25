@@ -376,7 +376,7 @@ class OpenShiftHelper {
                     }
 
 
-                    script.echo "DeployModels:${models}"
+                    //script.echo "DeployModels:${models}"
                     applyDeploymentConfig(script, openshift, buildProjectName, metadata.appName, context.envName, models, buildImageStreams)
 
 
@@ -471,8 +471,9 @@ class OpenShiftHelper {
 
         selector.label(['app':"${appName}-${envName}", 'app-name':"${appName}", 'env-name':"${envName}"], "--overwrite")
 
-        selector.narrow('is').withEach { imageStream ->
-            def o=imageStream.object();
+        script.echo "Tagging images"
+        openshift.selector( 'is', dcSelector).withEach { imageStream ->
+            def o=imageStream.object()
             def imageStreamName="${o.metadata.name}"
 
             if (buildImageStreams[imageStreamName] != null ){
@@ -482,28 +483,31 @@ class OpenShiftHelper {
         }
         script.echo 'Resuming DeploymentConfigs'
         openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
-            def o = dc.object();
+            def o = dc.object()
             script.echo "'${dc.name()}'  paused=${o.spec.paused}"
             if (o.spec.paused == true){
                 dc.rollout().resume()
             }
         }
-        script.echo 'Cancelling DeploymentConfigs'
-        script.echo "${openshift.selector( 'dc', dcSelector).freeze().rollout().cancel()}"
-        script.echo "Waiting for RCs to get cancelled"
-        //openshift.verbose(true);
-        openshift.selector( 'rc', dcSelector).watch { rcs ->
-            def allDone=true;
-            script.echo "Waiting for '${rcs.names()}'"
 
-            rcs.freeze().withEach { rc ->
-                def o = rc.object();
-                def phase=o.metadata.annotations['openshift.io/deployment.phase']
-                if (!( 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))){
-                    allDone=false;
+        if (openshift.selector( 'rc', dcSelector).count() > 0) {
+            script.echo 'Cancelling DeploymentConfigs'
+            script.echo "${openshift.selector('dc', dcSelector).freeze().rollout().cancel()}"
+            script.echo "Waiting for RCs to get cancelled"
+            //openshift.verbose(true);
+            openshift.selector('rc', dcSelector).watch { rcs ->
+                def allDone = true;
+                script.echo "Waiting for '${rcs.names()}'"
+
+                rcs.freeze().withEach { rc ->
+                    def o = rc.object();
+                    def phase = o.metadata.annotations['openshift.io/deployment.phase']
+                    if (!('Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))) {
+                        allDone = false;
+                    }
                 }
+                return allDone;
             }
-            return allDone;
         }
 
         script.echo "Deployments:"
