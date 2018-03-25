@@ -5,7 +5,7 @@ import com.openshift.jenkins.plugins.OpenShiftDSL;
 
 class OpenShiftHelper {
     @NonCPS
-    def getImageChangeTriggerBuildConfig(m, models) {
+    private def getImageChangeTriggerBuildConfig(m, models) {
         if (m.spec.triggers){
             for (def trigger:m.spec.triggers){
                 if ('ImageChange'.equalsIgnoreCase(trigger.type)){
@@ -198,7 +198,7 @@ class OpenShiftHelper {
         }
     }
 
-    def applyBuildConfig(CpsScript script, OpenShiftDSL openshift, appName, envName, models) {
+    private def applyBuildConfig(CpsScript script, OpenShiftDSL openshift, appName, envName, models) {
         //def body = {
         script.echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
         script.echo "openShiftBuild:openshift2:${openshift.dump()}"
@@ -262,7 +262,7 @@ class OpenShiftHelper {
     }
 
 
-    def startBuild(CpsScript script, OpenShiftDSL openshift, baseSelector, commitId) {
+    private def startBuild(CpsScript script, OpenShiftDSL openshift, baseSelector, commitId) {
         String buildNameSelector = null;
 
         def buildSelector = openshift.selector('builds', baseSelector + ['commit-id': "${commitId}"]);
@@ -284,27 +284,24 @@ class OpenShiftHelper {
     }
 
 
-    def waitForBuilds(CpsScript script, OpenShiftDSL openshift, List builds) {
+    private def waitForBuilds(CpsScript script, OpenShiftDSL openshift, List builds) {
         //Wait for all builds to complete
         waitForBuildsWithSelector(script, openshift, openshift.selector(builds));
     }
 
-    def freeze(OpenShiftDSL openshift, selector) {
+    private def freeze(OpenShiftDSL openshift, selector) {
         return openshift.selector(selector.names());
     }
 
-    def isBuildComplete(build) {
+    private def isBuildComplete(build) {
         return ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase) || "Failed".equalsIgnoreCase(build.status.phase))
     }
 
-    def isBuildSuccesful(build) {
+    private def isBuildSuccesful(build) {
         return "Complete".equalsIgnoreCase(build.status.phase)
     }
 
-    def __waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
-        //no-op
-    }
-    def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
+    private def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
         def names=selector.names()
         if (names.size() > 0){
             for (String name:names){
@@ -347,13 +344,8 @@ class OpenShiftHelper {
         OpenShiftDSL openshift=script.openshift
         Map metadata = context.metadata
 
-        context.dcPrefix=metadata.appName
-        context.dcSuffix='-dev'
-
-        if (metadata.isPullRequest){
-            context.envName = "pr-${metadata.pullRequestNumber}"
-            context.dcSuffix="-pr-${metadata.pullRequestNumber}"
-        }
+        if (!context.dcPrefix) context.dcPrefix=metadata.appName
+        if (!context.dcSuffix) context.dcSuffix="-${context.envName}"
 
         script.echo "OpenShiftHelper.deploy: Deploying"
         openshift.withCluster() {
@@ -393,18 +385,18 @@ class OpenShiftHelper {
         } // end openshift.withCluster()
     } // end 'deploy' method
     @NonCPS
-    def toJsonString(object) {
+    private def toJsonString(object) {
         return new groovy.json.JsonBuilder(object).toPrettyString()
     }
 
     @NonCPS
-    def processStringTemplate(String template, Map bindings) {
+    private def processStringTemplate(String template, Map bindings) {
         def engine = new groovy.text.GStringTemplateEngine()
         return engine.createTemplate(template).make(bindings).toString()
     }
 
     @NonCPS
-    def processStringTemplate(List params, Map bindings) {
+    private def processStringTemplate(List params, Map bindings) {
         def engine = new groovy.text.GStringTemplateEngine()
         def ret=[]
         for (def param:params) {
@@ -413,7 +405,7 @@ class OpenShiftHelper {
         return ret
     }
 
-    def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
+    private def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
         for ( c in containers ) {
             for ( t in triggers) {
                 if ('ImageChange'.equalsIgnoreCase(t['type'])){
@@ -446,7 +438,7 @@ class OpenShiftHelper {
         }
     }
 
-    def applyDeploymentConfig(CpsScript script, OpenShiftDSL openshift, String buildProjectName, String appName, String envName, List models, buildImageStreams) {
+    private def applyDeploymentConfig(CpsScript script, OpenShiftDSL openshift, String buildProjectName, String appName, String envName, List models, buildImageStreams) {
         def dcSelector=['app-name':appName, 'env-name':envName];
         def replicas=[:]
         for ( m in models ) {
@@ -536,7 +528,7 @@ class OpenShiftHelper {
         script.echo 'Waiting for pods to become ready'
         openshift.selector( 'dc', dcSelector).watch{ dc ->
             def objects=dc.objects()
-            
+
             for (def o: objects){
                 if (!(o.status && o.status.readyReplicas == replicas[o.metadata.name])){
                     return false

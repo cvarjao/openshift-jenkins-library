@@ -12,12 +12,13 @@ import org.kohsuke.github.*;
 import bcgov.OpenShiftHelper;
 
 def call(body) {
-    def pipelineParams= [:]
+    def context= ['openshift':['templates':['includes':'openshift/*.json']]]
+
     body.resolveStrategy = Closure.DELEGATE_FIRST
-    body.delegate = pipelineParams
+    body.delegate = context
     body()
 
-    def metadata=['appName':pipelineParams.name];
+    def metadata=['appName':context.name]
     
 
     pipeline {
@@ -30,14 +31,22 @@ def call(body) {
         agent none
         stages {
             stage('Prepare') {
-                agent { label 'master' }
+                agent { label 'maven' }
                 when { expression { return true } }
                 steps {
                     milestone(1)
+                    script { abortAllPreviousBuildInProgress }
                     checkout scm
                     script {
                         loadBuildMetadata(metadata);
                         echo "metadata:\n${metadata}"
+                        def stashIncludes=[]
+                        for ( def templateCfg : context.bcModels + context.dcModels){
+                            if ('-f'.equalsIgnoreCase(templateCfg[0])){
+                                stashIncludes.add(templateCfg[1])
+                            }
+                        }
+                        stash(name: 'openshift', includes:stashIncludes.join(','))
                     } //end script
                 }
             }
@@ -55,10 +64,12 @@ def call(body) {
                 when { expression { return true} }
                 steps {
                     script {
+                        echo 'Building ...'
+                        unstash(name: 'openshift')
                         new OpenShiftHelper().build(this,[
                             'metadata': metadata,
-                            'models': pipelineParams.bcModels
-                        ]);
+                            'models': context.bcModels
+                        ])
 
                     } //end script
                 } //end steps
@@ -69,33 +80,13 @@ def call(body) {
                 steps {
                     script {
                         echo 'Deploying'
+                        unstash(name: 'openshift')
                         new OpenShiftHelper().deploy(this,[
                                 'projectName': 'csnr-devops-lab-deploy',
-                                'envName': "dev",
+                                'envName': "dev-pr-${metadata.pullRequestNumber}",
                                 'metadata': metadata,
-                                'models': pipelineParams.dcModels
-                        ]);
-
-                        /*
-                        openShiftDeploy (metadata, {
-                            projectName = 'csnr-devops-lab-deploy'
-                            envName = "dev"
-                            models = {
-                                return [] + openshift.process(
-                                            'openshift//mysql-ephemeral',
-                                            "-p", "DATABASE_SERVICE_NAME=${dcPrefix}-db${dcSuffix}",
-                                            '-p', "MYSQL_DATABASE=petclinic"
-                                    ) + openshift.process("-f", "openshift.dc.json",
-                                            "-p", "APP_NAME=${metadata.appName}",
-                                            "-p", "ENV_NAME=${envName}",
-                                            "-p", "NAME_PREFIX=${dcPrefix}",
-                                            "-p", "NAME_SUFFIX=${dcSuffix}",
-                                            "-p", "BC_PROJECT=${openshift.project()}",
-                                            "-p", "DC_PROJECT=${openshift.project()}"
-                                    )
-                            }
-                        })
-                        */
+                                'models': context.dcModels
+                        ])
                     } //end script
                 }
             } // end stage
