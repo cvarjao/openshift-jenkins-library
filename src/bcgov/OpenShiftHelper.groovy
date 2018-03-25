@@ -167,6 +167,9 @@ class OpenShiftHelper {
                     script.echo "Waiting for builds to complete"
                     //builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
                     waitForBuilds(script, openshift, builds)
+                    openshift.selector(builds).withEach { build ->
+                        build.label(['commit-id': "${build.object().spec.source.git.ref}"], "--overwrite")
+                    }
                     builds.clear()
                     script.sleep 10 //wait for triggers to kick in
                     for (m in models) {
