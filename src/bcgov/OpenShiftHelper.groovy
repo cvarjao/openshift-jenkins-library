@@ -339,6 +339,14 @@ class OpenShiftHelper {
         }
     } // end method
 
+    @NonCPS
+    private def getImageStreamBaseName(res) {
+        String baseName=res.metadata.name
+        if (res.metadata && res.metadata.labels && res.metadata.labels['base-name']){
+            baseName=iso.labels['base-name']
+        }
+        return baseName
+    }
 
     def deploy(CpsScript script, Map context) {
         OpenShiftDSL openshift=script.openshift
@@ -354,10 +362,12 @@ class OpenShiftHelper {
 
             script.echo "Collecting ImageStreams";
             openshift.selector( 'is', ['app-name':metadata.appName, 'env-name':metadata.buildEnvName]).freeze().withEach {
-                buildImageStreams["${it.object().metadata.name}"]=true
+                def iso=it.object()
+                String baseName=getImageStreamBaseName(iso)
+                buildImageStreams[baseName]=iso
             }
 
-            script.echo "buildImageStreams:${buildImageStreams}"
+            //script.echo "buildImageStreams:${buildImageStreams}"
             openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
                 openshift.withProject( context.projectName ) {
                     def models = [];
@@ -463,11 +473,11 @@ class OpenShiftHelper {
 
         script.echo "The template will create/update ${models.size()} objects"
         //TODO: needs to review usage of 'apply', it recreates Secrets!!!
-        def secrets=models.findAll();
-        def configSets=models.findAll();
-        def others=models.findAll();
+        def secrets=models.findAll()
+        def configSets=models.findAll()
+        def others=models.findAll()
 
-        def selector=openshift.apply(others);
+        def selector=openshift.apply(others)
 
         selector.label(['app':"${appName}-${envName}", 'app-name':"${appName}", 'env-name':"${envName}"], "--overwrite")
 
@@ -475,10 +485,11 @@ class OpenShiftHelper {
         openshift.selector( 'is', dcSelector).withEach { imageStream ->
             def o=imageStream.object()
             def imageStreamName="${o.metadata.name}"
+            def sourceImageStream=buildImageStreams[getImageStreamBaseName(o)]
 
-            if (buildImageStreams[imageStreamName] != null ){
-                script.echo "Tagging '${buildProjectName}/${o.metadata.name}:latest' as '${o.metadata.name}:${envName}'"
-                openshift.tag("${buildProjectName}/${o.metadata.name}:latest", "${o.metadata.name}:${envName}")
+            if (sourceImageStream){
+                script.echo "Tagging '${buildProjectName}/${sourceImageStream.metadata.name}:latest' as '${o.metadata.name}:${envName}'"
+                openshift.tag("${buildProjectName}/${sourceImageStream.metadata.name}:latest", "${o.metadata.name}:${envName}")
             }
         }
         script.echo 'Resuming DeploymentConfigs'
