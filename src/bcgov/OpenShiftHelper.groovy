@@ -221,7 +221,8 @@ class OpenShiftHelper {
         script.echo "Processing ${models.size()} objects for '${appName}' for '${envName}'"
         def creations=[]
         def updates=[]
-        for (o in models) {
+
+        for (Object o in models) {
             script.echo "Processing '${o.kind}/${o.metadata.name}' (before apply)"
             if (o.metadata.labels==null) o.metadata.labels =[:]
             o.metadata.labels["app"] = "${appName}-${envName}"
@@ -238,6 +239,12 @@ class OpenShiftHelper {
                     updates.add(o);
                 }else{
                     script.echo "Skipping '${o.kind}/${o.metadata.name}' (Already Exists)"
+                    def newObject=jsonClone(o)
+                    if (newObject.spec && newObject.spec.tags){
+                        newObject.spec.remove('tags')
+                    }
+                    script.echo "Modifed '${o.kind}/${o.metadata.name}' = ${newObject}"
+                    updates.add(newObject)
                 }
             }
 
@@ -395,6 +402,18 @@ class OpenShiftHelper {
             } // end openshift.withCredentials()
         } // end openshift.withCluster()
     } // end 'deploy' method
+
+    @NonCPS
+    private def jsonClone(Object object) {
+        def jsonString = groovy.json.JsonOutput.toJson(object)
+        return new groovy.json.JsonSlurper().parseText(jsonString)
+    }
+
+    @NonCPS
+    private def toJson(String string) {
+        return new groovy.json.JsonSlurper().parseText(string)
+    }
+
     @NonCPS
     private def toJsonString(object) {
         return new groovy.json.JsonBuilder(object).toPrettyString()
