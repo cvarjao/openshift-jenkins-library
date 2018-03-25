@@ -229,21 +229,21 @@ class OpenShiftHelper {
             o.metadata.labels["app-name"] = "${appName}"
             o.metadata.labels["env-name"] = "${envName}"
 
-            def sel=openshift.selector("${o.kind}/${o.metadata.name}");
+            def sel=openshift.selector("${o.kind}/${o.metadata.name}")
             if (sel.count()==0){
                 script.echo "Creating '${o.kind}/${o.metadata.name}'"
-                creations.add(o);
+                creations.add(o)
             }else{
                 if (!'ImageStream'.equalsIgnoreCase("${o.kind}")){
                     script.echo "Updating '${o.kind}/${o.metadata.name}'"
                     updates.add(o);
                 }else{
                     script.echo "Skipping '${o.kind}/${o.metadata.name}' (Already Exists)"
-                    def newObject=jsonClone(o)
-                    if (newObject.spec && newObject.spec.tags){
-                        newObject.spec.remove('tags')
-                    }
-                    script.echo "Modifed '${o.kind}/${o.metadata.name}' = ${newObject}"
+                    def newObject=o;
+                    //if (newObject.spec && newObject.spec.tags){
+                    //    newObject.spec.remove('tags')
+                    //}
+                    //script.echo "Modified '${o.kind}/${o.metadata.name}' = ${newObject}"
                     updates.add(newObject)
                 }
             }
