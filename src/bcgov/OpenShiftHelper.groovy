@@ -364,6 +364,7 @@ class OpenShiftHelper {
             openshift.selector( 'is', ['app-name':metadata.appName, 'env-name':metadata.buildEnvName]).freeze().withEach {
                 def iso=it.object()
                 String baseName=getImageStreamBaseName(iso)
+                script.echo "Build ImageStream '${iso.metadata.name}' baseName is '${baseName}'";
                 buildImageStreams[baseName]=iso
             }
 
@@ -485,7 +486,10 @@ class OpenShiftHelper {
         openshift.selector( 'is', dcSelector).withEach { imageStream ->
             def o=imageStream.object()
             def imageStreamName="${o.metadata.name}"
-            def sourceImageStream=buildImageStreams[getImageStreamBaseName(o)]
+            def imageStreamBaseName=getImageStreamBaseName(o)
+            def sourceImageStream=buildImageStreams[imageStreamBaseName]
+
+            script.echo "Build ImageStream '${imageStreamName}' baseName is '${imageStreamBaseName}'";
 
             if (sourceImageStream){
                 script.echo "Tagging '${buildProjectName}/${sourceImageStream.metadata.name}:latest' as '${o.metadata.name}:${envName}'"
