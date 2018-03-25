@@ -110,7 +110,7 @@ class OpenShiftHelper {
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
                         script.echo "Processing 'bc/${m.metadata.name}'"
                         String commitId = m.metadata.annotations['spec.source.git.ref']
-
+                        if (m.status==null) m.status=[:]
                         def startNewBuild=true
 
 
@@ -132,7 +132,7 @@ class OpenShiftHelper {
                         }
                         */
                         def sourceBuildConfig=getImageChangeTriggerBuildConfig(m, models)
-                        if (sourceBuildConfig!=null){
+                        if (sourceBuildConfig!=null && sourceBuildConfig.status.newBuild){
                             _deferredBuilds.add(openshift.selector("bc/${m.metadata.name}").object())
                             startNewBuild=false
                         }
