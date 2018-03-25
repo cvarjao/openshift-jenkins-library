@@ -170,6 +170,12 @@ class OpenShiftHelper {
                     openshift.selector(builds).withEach { build ->
                         build.label(['commit-id': "${build.object().spec.source.git.ref}"], "--overwrite")
                     }
+                    openshift.selector(builds).withEach { build ->
+                        def bo = build.object() // build object
+                        if (!isBuildSuccesful(bo)) {
+                            script.error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
+                        }
+                    }
                     builds.clear()
                     script.sleep 10 //wait for triggers to kick in
                     for (m in models) {
@@ -333,12 +339,6 @@ class OpenShiftHelper {
                 queue.remove(0)
             }
             */
-            openshift.selector(selector.names()).withEach { build ->
-                def bo = build.object() // build object
-                if (!isBuildSuccesful(bo)) {
-                    script.error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
-                }
-            }
         }
     } // end method
 
