@@ -535,8 +535,14 @@ class OpenShiftHelper {
         }
         script.echo 'Waiting for pods to become ready'
         openshift.selector( 'dc', dcSelector).watch{ dc ->
-            def o=dc.object()
-            return o.status && o.status.readyReplicas == replicas[o.metadata.name]
+            def objects=dc.objects()
+            
+            for (def o: objects){
+                if (!(o.status && o.status.readyReplicas == replicas[o.metadata.name])){
+                    return false
+                }
+            }
+            return true
         }
         //openshift.selector("dc/nginx").rollout().resume()
 
