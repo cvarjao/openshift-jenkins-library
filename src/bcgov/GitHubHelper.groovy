@@ -19,39 +19,48 @@ class GitHubHelper {
     static GHRepository getPullRequest(CpsScript script){
         return getGitHubRepository(script).getPullRequest(Integer.parseInt(script.env.CHANGE_ID))
     }
+
+    @NonCPS
     static def createDeployment(CpsScript script, String ref) {
-        getGitHubRepository(script).createDeployment(ref)
+        return getGitHubRepository(script).createDeployment(ref)
     }
+
+    @NonCPS
     static def createDeploymentStatus(CpsScript script, long deploymentId, GHDeploymentState state) {
         return getGitHubRepository(script).getDeployment(deploymentId).createStatus(state)
     }
+    
     /*
     * http://github-api.kohsuke.org/apidocs/org/kohsuke/github/GHDeploymentBuilder.html
     * */
-    long createDeployment(CpsScript script, Map deploymentConfig) {
-        def ghRepo=getGitHubRepository(script)
-        def ghDeploymentResponse=ghRepo.createDeployment(deploymentConfig.ref).environment(deploymentConfig.environment)
+    static long createDeployment(CpsScript script, String ref, Map deploymentConfig) {
+        def ghDeploymentResponse=createDeployment(script, ref)
 
-        if (deploymentConfig.payload){
-            ghDeploymentResponse.payload(deploymentConfig.payload)
+        if (deploymentConfig!=null) {
+            if (deploymentConfig.environment) {
+                ghDeploymentResponse.environment(deploymentConfig.environment)
+            }
+
+            if (deploymentConfig.payload) {
+                ghDeploymentResponse.payload(deploymentConfig.payload)
+            }
+
+            if (deploymentConfig.description) {
+                ghDeploymentResponse.description(deploymentConfig.description)
+            }
+
+            if (deploymentConfig.task) {
+                ghDeploymentResponse.task(deploymentConfig.task)
+            }
+
+            if (deploymentConfig.requiredContexts) {
+                ghDeploymentResponse.requiredContexts(deploymentConfig.requiredContexts)
+            }
         }
-
-        if (deploymentConfig.description){
-            ghDeploymentResponse.description(deploymentConfig.description)
-        }
-
-        if (deploymentConfig.task){
-            ghDeploymentResponse.task(deploymentConfig.task)
-        }
-
-        if (deploymentConfig.requiredContexts){
-            ghDeploymentResponse.requiredContexts(deploymentConfig.requiredContexts)
-        }
-
         return ghDeploymentResponse.create().getId()
     }
 
-    long updateDeploymentStatus(CpsScript script, long deploymentId, String statusName, Map deploymentStatusConfig) {
+    static long createDeploymentStatus(CpsScript script, long deploymentId, String statusName, Map deploymentStatusConfig) {
         def ghRepo=getGitHubRepository(script)
         def ghDeploymentState=GHDeploymentState.valueOf(statusName)
 
