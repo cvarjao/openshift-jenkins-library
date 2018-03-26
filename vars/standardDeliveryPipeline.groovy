@@ -43,7 +43,7 @@ def call(body) {
                 }
             }
             stage('Build') {
-                agent { label 'maven' }
+                agent { label 'master' }
                 when { expression { return true } }
                 steps {
                     script { abortAllPreviousBuildInProgress }
