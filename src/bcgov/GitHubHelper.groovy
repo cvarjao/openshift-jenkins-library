@@ -14,7 +14,7 @@ class GitHubHelper {
         return getGitHubRepository(script.scm.getUserRemoteConfigs()[0].getUrl())
     }
 
-
+    @NonCPS
     static GHRepository getGitHubRepository(String url){
         return GitHubRepositoryName.create(url).resolveOne()
     }
