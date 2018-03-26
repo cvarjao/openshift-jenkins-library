@@ -28,7 +28,7 @@ def call(body) {
             // Keep 10 builds at a time
             buildDiscarder(logRotator(numToKeepStr:'10'))
             skipDefaultCheckout()
-            durabilityHint('PERFORMANCE_OPTIMIZED')
+            //durabilityHint('PERFORMANCE_OPTIMIZED')
         }
         agent none
         stages {
