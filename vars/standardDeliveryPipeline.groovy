@@ -28,6 +28,7 @@ def call(body) {
             // Keep 10 builds at a time
             buildDiscarder(logRotator(numToKeepStr:'10'))
             skipDefaultCheckout()
+            durabilityHint('PERFORMANCE_OPTIMIZED')
         }
         agent none
         stages {
@@ -37,7 +38,7 @@ def call(body) {
                 steps {
                     script { abortAllPreviousBuildInProgress(currentBuild) }
                     script {
-                        GitHubHelper.getGitHubRepository(this).getPullRequest(Integer.parseInt(env.CHANGE_ID)).comment("Starting pipeline")
+                        GitHubHelper.getPullRequest(this).comment("Starting pipeline\n${currentBuild.absoluteUrl}")
                     }
                 }
             }
@@ -48,7 +49,7 @@ def call(body) {
                     script { abortAllPreviousBuildInProgress }
                     checkout scm
                     script {
-                        GitHubHelper.getGitHubRepository(this).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Building ...")
+                        GitHubHelper.getPullRequest(this).comment("Build in progress")
                         loadBuildMetadata(metadata);
                         echo "metadata:\n${metadata}"
                         def stashIncludes=[]
@@ -64,7 +65,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.bcModels
                         ])
-                        GitHubHelper.getGitHubRepository(this).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Build complete")
+                        GitHubHelper.getPullRequest(this).comment("Build complete")
                     } //end script
                 }
             }
@@ -74,7 +75,7 @@ def call(body) {
                 steps {
                     script {
                         echo 'Deploying'
-                        GitHubHelper.getGitHubRepository(this).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Deploying to DEV")
+                        GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
                         unstash(name: 'openshift')
                         new OpenShiftHelper().deploy(this,[
                                 'projectName': 'csnr-devops-lab-deploy',
@@ -82,7 +83,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.dcModels
                         ])
-                        GitHubHelper.getGitHubRepository(this).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Deployed to DEV")
+                        GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
                     } //end script
                 }
             } // end stage

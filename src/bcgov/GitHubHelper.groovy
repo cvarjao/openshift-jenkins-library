@@ -16,7 +16,9 @@ class GitHubHelper {
     static GHRepository getGitHubRepository(String url){
         return GitHubRepositoryName.create(url).resolveOne()
     }
-
+    static GHRepository getPullRequest(CpsScript script){
+        return getGitHubRepository(script).getPullRequest(Integer.parseInt(script.env.CHANGE_ID))
+    }
     /*
     * http://github-api.kohsuke.org/apidocs/org/kohsuke/github/GHDeploymentBuilder.html
     * */
