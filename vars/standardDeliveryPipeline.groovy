@@ -79,14 +79,18 @@ def call(body) {
                 steps {
                     script {
                         echo 'Deploying'
+                        String envName="dev-pr-${metadata.pullRequestNumber}"
+                        long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit).environment(envName).create().getId()
+
                         //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
                         unstash(name: 'openshift')
                         new OpenShiftHelper().deploy(this,[
                                 'projectName': 'csnr-devops-lab-deploy',
-                                'envName': "dev-pr-${metadata.pullRequestNumber}",
+                                'envName': envName,
                                 'metadata': metadata,
                                 'models': context.dcModels
                         ])
+                        GitHubHelper.createDeploymentStatus(this, ghDeploymentId, GHDeploymentState.SUCCESS).create()
                         //GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
                     } //end script
                 }

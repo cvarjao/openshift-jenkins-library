@@ -19,6 +19,12 @@ class GitHubHelper {
     static GHRepository getPullRequest(CpsScript script){
         return getGitHubRepository(script).getPullRequest(Integer.parseInt(script.env.CHANGE_ID))
     }
+    static def createDeployment(CpsScript script, String ref) {
+        getGitHubRepository(script).createDeployment(ref)
+    }
+    static def createDeploymentStatus(CpsScript script, long deploymentId, GHDeploymentState state) {
+        return getGitHubRepository(script).getDeployment(deploymentId).createStatus(state)
+    }
     /*
     * http://github-api.kohsuke.org/apidocs/org/kohsuke/github/GHDeploymentBuilder.html
     * */
