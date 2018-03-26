@@ -491,7 +491,7 @@ class OpenShiftHelper {
                 replicas[o.metadata.name]=o.spec.replicas
             }
 
-            script.echo "'${dc.name()}'  paused=${o.spec.paused}"
+            script.echo "Pausing '${dc.name()}'"
             if ( o.spec.paused == false ){
                 dc.rollout().pause()
             }
@@ -524,12 +524,36 @@ class OpenShiftHelper {
         script.echo 'Resuming DeploymentConfigs'
         openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
             def o = dc.object()
-            script.echo "'${dc.name()}'  paused=${o.spec.paused}"
+            script.echo "Resuming '${dc.name()}'"
             if (o.spec.paused == true){
                 dc.rollout().resume()
             }
+            if (o.status && o.status.latestVersion){
+                def rc = openshift.selector("rc/${o.metadata.name}-${o.status.latestVersion}")
+                if (rc.count() > 0) {
+                    rc.rollout().cancel()
+                }
+            }
         }
 
+        script.echo "Waiting for RCs to get Complete or get Cancelled"
+        openshift.selector( 'dc', dcSelector).watch { dc ->
+            def allDone = true;
+            dc.withEach { dc1 ->
+                def o = dc1.object();
+                def rc = openshift.selector("rc/${o.metadata.name}-${o.status.latestVersion}")
+                if (rc.count() > 0) {
+                    def rco = rc.object()
+                    def phase = rco.metadata.annotations['openshift.io/deployment.phase']
+                    if (!('Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))) {
+                        allDone = false
+                    }
+                }
+            }
+            return allDone
+        }
+
+        /*
         if (openshift.selector( 'rc', dcSelector).count() > 0) {
             script.echo 'Cancelling DeploymentConfigs'
             script.echo "${openshift.selector('dc', dcSelector).freeze().rollout().cancel()}"
@@ -549,19 +573,25 @@ class OpenShiftHelper {
                 return allDone;
             }
         }
-
+        */
         script.echo "Deployments:"
-        script.echo "${openshift.selector( 'dc', dcSelector).freeze().rollout().latest()}"
-        openshift.selector( 'rc', dcSelector).watch { rcs ->
-            def allDone=true;
-            rcs.freeze().withEach { rc ->
-                def o = rc.object();
-                def phase=o.metadata.annotations['openshift.io/deployment.phase']
-                if (!( 'Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))){
-                    allDone=false;
+        openshift.selector( 'dc', dcSelector).freeze().rollout().latest()
+
+        script.echo "Waiting for RCs to Complete"
+        openshift.selector( 'dc', dcSelector).watch { dc ->
+            def allDone = true
+            dc.withEach { dc1 ->
+                def o = dc1.object();
+                def rc = openshift.selector("rc/${o.metadata.name}-${o.status.latestVersion}")
+                if (rc.count() > 0) {
+                    def rco = rc.object()
+                    def phase = rco.metadata.annotations['openshift.io/deployment.phase']
+                    if (!('Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))) {
+                        allDone = false
+                    }
                 }
             }
-            return allDone;
+            return allDone
         }
 
         script.echo 'Scaling-up application'
@@ -570,10 +600,10 @@ class OpenShiftHelper {
             script.echo "Scaling ${o.metadata.name}"
             openshift.selector(dc.name()).scale("--replicas=${replicas[o.metadata.name]}", '--timeout=2m')
         }
+
         script.echo 'Waiting for pods to become ready'
         openshift.selector( 'dc', dcSelector).watch{ dc ->
             def objects=dc.objects()
-
             for (def o: objects){
                 if (!(o.status && o.status.readyReplicas == Integer.parseInt(o.metadata.annotations['replicas']))){
                     return false
