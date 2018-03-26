@@ -78,7 +78,7 @@ def call(body) {
                     } //end script
                 }
             }
-            stage('deploy - DEV') {
+            stage('Deploy - DEV') {
                 agent any
                 when { expression { return true} }
                 steps {
