@@ -581,7 +581,7 @@ class OpenShiftHelper {
             }
             return true
         }
-        openshift.selector( 'dc', dcSelector).annotate(['replicas':''])
+        openshift.selector( 'dc', dcSelector).annotate(['replicas':''], "--overwrite")
 
         //openshift.selector("dc/nginx").rollout().resume()
 
