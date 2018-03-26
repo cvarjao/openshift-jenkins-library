@@ -38,7 +38,7 @@ def call(body) {
                 steps {
                     script { abortAllPreviousBuildInProgress(currentBuild) }
                     script {
-                        GitHubHelper.getPullRequest(this).comment("Starting pipeline\n${currentBuild.absoluteUrl}")
+                        GitHubHelper.getPullRequest(this).comment("Starting pipeline")
                     }
                 }
             }
