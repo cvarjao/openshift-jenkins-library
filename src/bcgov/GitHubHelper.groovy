@@ -14,7 +14,7 @@ class GitHubHelper {
         return getGitHubRepository(script.scm.getUserRemoteConfigs()[0].getUrl())
     }
 
-    @NonCPS
+
     static GHRepository getGitHubRepository(String url){
         return GitHubRepositoryName.create(url).resolveOne()
     }
@@ -28,7 +28,7 @@ class GitHubHelper {
         return getGitHubRepository(script).createDeployment(ref)
     }
 
-    @NonCPS
+
     static def createDeployment(String url, String ref) {
         return getGitHubRepository(url).createDeployment(ref)
     }
@@ -40,7 +40,6 @@ class GitHubHelper {
     /*
     * http://github-api.kohsuke.org/apidocs/org/kohsuke/github/GHDeploymentBuilder.html
     * */
-    @NonCPS
     static long createDeployment(String url, String ref, Map deploymentConfig) {
         def ghDeploymentResponse=createDeployment(url, ref)
         if (deploymentConfig!=null) {
@@ -70,6 +69,7 @@ class GitHubHelper {
     }
 
     static long createDeployment(CpsScript script, String ref, Map deploymentConfig) {
+        script.echo "ref:${ref} - config:${deploymentConfig}"
         return createDeployment(script.scm.getUserRemoteConfigs()[0].getUrl(), ref, deploymentConfig)
 
     }
