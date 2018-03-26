@@ -45,7 +45,7 @@ def call(body) {
                     script { abortAllPreviousBuildInProgress }
                     checkout scm
                     script {
-                        GitHubHelper.getGitHubRepository(script).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Building ...")
+                        GitHubHelper.getGitHubRepository(this).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Building ...")
                         loadBuildMetadata(metadata);
                         echo "metadata:\n${metadata}"
                         def stashIncludes=[]
@@ -61,7 +61,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.bcModels
                         ])
-                        GitHubHelper.getGitHubRepository(script).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Build complete")
+                        GitHubHelper.getGitHubRepository(this).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Build complete")
                     } //end script
                 }
             }
@@ -71,7 +71,7 @@ def call(body) {
                 steps {
                     script {
                         echo 'Deploying'
-                        GitHubHelper.getGitHubRepository(script).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Deploying to DEV")
+                        GitHubHelper.getGitHubRepository(this).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Deploying to DEV")
                         unstash(name: 'openshift')
                         new OpenShiftHelper().deploy(this,[
                                 'projectName': 'csnr-devops-lab-deploy',
@@ -79,7 +79,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.dcModels
                         ])
-                        GitHubHelper.getGitHubRepository(script).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Deployed to DEV")
+                        GitHubHelper.getGitHubRepository(this).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Deployed to DEV")
                     } //end script
                 }
             } // end stage
