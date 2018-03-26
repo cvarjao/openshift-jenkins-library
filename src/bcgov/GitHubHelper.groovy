@@ -45,7 +45,9 @@ class GitHubHelper {
         long deploymentId = -1
         GHDeploymentBuilder builder=getGitHubRepository(url).createDeployment(ref)
         builder.environment(deploymentConfig.environment)
+
         builder.create()
+
         //deployment=null
         /*
         if (deploymentConfig!=null) {
@@ -79,7 +81,12 @@ class GitHubHelper {
 
     long createDeployment(CpsScript script, String ref, Map deploymentConfig) {
         script.echo "ref:${ref} - config:${deploymentConfig}"
-        createDeployment(script.scm.getUserRemoteConfigs()[0].getUrl(), ref, deploymentConfig)
+        try {
+            createDeployment(script.scm.getUserRemoteConfigs()[0].getUrl(), ref, deploymentConfig)
+        }catch (Exception ex){
+            script.echo "error:${ex}"
+            script.error "error"
+        }
         return -1;
     }
 
