@@ -483,8 +483,14 @@ class OpenShiftHelper {
         //echo "Scaling down"
         // openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
         openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
-            def o = dc.object();
-            replicas[o.metadata.name]=o.spec.replicas
+            def o = dc.object()
+            if (o.metadata.annotations && o.metadata.annotations['replicas']){
+                replicas[o.metadata.name]=o.metadata.annotations['replicas']
+            }else{
+                dc.annotate(['replicas':o.spec.replicas])
+                replicas[o.metadata.name]=o.spec.replicas
+            }
+
             script.echo "'${dc.name()}'  paused=${o.spec.paused}"
             if ( o.spec.paused == false ){
                 dc.rollout().pause()
@@ -575,6 +581,8 @@ class OpenShiftHelper {
             }
             return true
         }
+        openshift.selector( 'dc', dcSelector).annotate(['replicas-':''])
+
         //openshift.selector("dc/nginx").rollout().resume()
 
         //openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
