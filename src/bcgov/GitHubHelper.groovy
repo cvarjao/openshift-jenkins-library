@@ -43,6 +43,9 @@ class GitHubHelper {
     static long createDeployment(String url, String ref, Map deploymentConfig) {
         long deploymentId = -1
         GHDeploymentBuilder builder=getGitHubRepository(url).createDeployment(ref)
+        builder.environment(deploymentConfig.environment)
+        GHDeployment deployment = builder.create()
+
         /*
         if (deploymentConfig!=null) {
             if (deploymentConfig.environment) {
