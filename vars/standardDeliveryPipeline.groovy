@@ -39,7 +39,6 @@ def call(body) {
                 steps {
                     script {
                         abortAllPreviousBuildInProgress(currentBuild)
-                        echo sh(script: 'env|sort', returnStdout: true)
                         GitHubHelper.getPullRequest(this).comment("Starting pipeline [build #${currentBuild.number}]()")
                     }
                 }
@@ -48,7 +47,10 @@ def call(body) {
                 agent { label 'master' }
                 when { expression { return true } }
                 steps {
-                    script { abortAllPreviousBuildInProgress }
+                    script {
+                        abortAllPreviousBuildInProgress
+                        echo sh(script: 'env|sort', returnStdout: true)
+                    }
                     checkout scm
                     script {
                         //GitHubHelper.getPullRequest(this).comment("Build in progress")
