@@ -528,12 +528,15 @@ class OpenShiftHelper {
             if (o.spec.paused == true){
                 dc.rollout().resume()
             }
+            dc.rollout().cancel()
+            /*
             if (o.status && o.status.latestVersion){
                 def rc = openshift.selector("rc/${o.metadata.name}-${o.status.latestVersion}")
                 if (rc.count() > 0) {
                     rc.rollout().cancel()
                 }
             }
+            */
         }
 
         script.echo "Waiting for RCs to get Complete or get Cancelled"
