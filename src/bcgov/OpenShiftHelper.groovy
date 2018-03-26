@@ -350,7 +350,7 @@ class OpenShiftHelper {
     private def getImageStreamBaseName(res) {
         String baseName=res.metadata.name
         if (res.metadata && res.metadata.labels && res.metadata.labels['base-name']){
-            baseName=res.labels['base-name']
+            baseName=res.metadata.labels['base-name']
         }
         return baseName
     }
