@@ -36,6 +36,9 @@ def call(body) {
                 when { expression { return true } }
                 steps {
                     script { abortAllPreviousBuildInProgress(currentBuild) }
+                    script {
+                        GitHubHelper.getGitHubRepository(this).getPullRequest(Integer.parseInt(env.CHANGE_ID)).comment("Starting pipeline")
+                    }
                 }
             }
             stage('Build') {
