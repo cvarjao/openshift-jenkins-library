@@ -12,6 +12,7 @@ import org.kohsuke.github.*
 import bcgov.OpenShiftHelper
 import bcgov.GitHubHelper
 
+
 def call(body) {
     def context= ['openshift':['templates':['includes':'openshift/*.json']]]
 
@@ -36,6 +37,7 @@ def call(body) {
                 agent none
                 when { expression { return true } }
                 steps {
+                    sh 'printenv'
                     script {
                         abortAllPreviousBuildInProgress(currentBuild)
                         GitHubHelper.getPullRequest(this).comment("Starting pipeline [build #${currentBuild.number}]()")
