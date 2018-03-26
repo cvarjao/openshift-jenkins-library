@@ -575,7 +575,7 @@ class OpenShiftHelper {
             def objects=dc.objects()
 
             for (def o: objects){
-                if (!(o.status && o.status.readyReplicas == replicas[o.metadata.name])){
+                if (!(o.status && o.status.readyReplicas == Integer.parseInt(o.metadata.annotations['replicas']))){
                     return false
                 }
             }
