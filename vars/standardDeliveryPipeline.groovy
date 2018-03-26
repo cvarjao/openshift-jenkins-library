@@ -34,7 +34,8 @@ def call(body) {
                 agent { label 'master' }
                 when { expression { return true } }
                 steps {
-                    script { abortAllPreviousBuildInProgress }
+                    echo 'todo:Cancel previous builds'
+                    //script { abortAllPreviousBuildInProgress }
                 }
             }
             stage('Build') {
