@@ -1,25 +1,27 @@
 package bcgov
 
-import org.kohsuke.github.*;
-import org.jenkinsci.plugins.workflow.cps.CpsScript;
+import org.kohsuke.github.*
+import org.jenkinsci.plugins.workflow.cps.CpsScript
+import com.cloudbees.jenkins.GitHubRepositoryName
 
+/*
+* Reference:
+*   - http://github-api.kohsuke.org/apidocs/index.html
+*   - https://github.com/jenkinsci/github-plugin/blob/master/src/main/java/com/cloudbees/jenkins/GitHubRepositoryName.java
+* */
 class GitHubHelper {
-    def getGitHubRepository(){
-        def gitRepoUrl = scm.getUserRemoteConfigs()[0].getUrl()
-        def gitRepoFullName=gitRepoUrl.replace('https://github.com/', '').replace('.git', '')
-        //echo "gitRepoFullName='${gitRepoFullName}'"
-
-        def githubUsername=env.GH_USERNAME
-        def githubPassword = env.GH_PASSWORD
-        def github=new GitHubBuilder().withPassword(githubUsername, githubPassword).build()
-        return github.getRepository(gitRepoFullName)
+    static GHRepository getGitHubRepository(CpsScript script){
+        return getGitHubRepository(script.scm.getUserRemoteConfigs()[0].getUrl())
+    }
+    static GHRepository getGitHubRepository(String url){
+        return GitHubRepositoryName.resolveOne(url)
     }
 
     /*
     * http://github-api.kohsuke.org/apidocs/org/kohsuke/github/GHDeploymentBuilder.html
     * */
     long createDeployment(CpsScript script, Map deploymentConfig) {
-        def ghRepo=getGitHubRepository(script.scm.getUserRemoteConfigs()[0].getUrl())
+        def ghRepo=getGitHubRepository(script)
         def ghDeploymentResponse=ghRepo.createDeployment(deploymentConfig.ref).environment(deploymentConfig.environment)
 
         if (deploymentConfig.payload){
@@ -42,7 +44,7 @@ class GitHubHelper {
     }
 
     long updateDeploymentStatus(CpsScript script, long deploymentId, String statusName, Map deploymentStatusConfig) {
-        def ghRepo=getGitHubRepository(script.scm.getUserRemoteConfigs()[0].getUrl())
+        def ghRepo=getGitHubRepository(script)
         def ghDeploymentState=GHDeploymentState.valueOf(statusName)
 
         def ghDeploymentStatus=ghRepo.getDeployment(deploymentId).createStatus(ghDeploymentState)

@@ -8,8 +8,9 @@
 
 import hudson.model.Result;
 import jenkins.model.CauseOfInterruption.UserInterruption;
-import org.kohsuke.github.*;
-import bcgov.OpenShiftHelper;
+import org.kohsuke.github.*
+import bcgov.OpenShiftHelper
+import bcgov.GitHubHelper
 
 def call(body) {
     def context= ['openshift':['templates':['includes':'openshift/*.json']]]
@@ -44,6 +45,7 @@ def call(body) {
                     script { abortAllPreviousBuildInProgress }
                     checkout scm
                     script {
+                        GitHubHelper.getGitHubRepository(script).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Building ...")
                         loadBuildMetadata(metadata);
                         echo "metadata:\n${metadata}"
                         def stashIncludes=[]
@@ -59,7 +61,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.bcModels
                         ])
-
+                        GitHubHelper.getGitHubRepository(script).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Build complete")
                     } //end script
                 }
             }
@@ -69,6 +71,7 @@ def call(body) {
                 steps {
                     script {
                         echo 'Deploying'
+                        GitHubHelper.getGitHubRepository(script).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Deploying to DEV")
                         unstash(name: 'openshift')
                         new OpenShiftHelper().deploy(this,[
                                 'projectName': 'csnr-devops-lab-deploy',
@@ -76,6 +79,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.dcModels
                         ])
+                        GitHubHelper.getGitHubRepository(script).getPullRequest(Integer.parseInt(metadata.pullRequestNumber)).comment("Deployed to DEV")
                     } //end script
                 }
             } // end stage
