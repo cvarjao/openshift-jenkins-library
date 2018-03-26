@@ -41,9 +41,9 @@ class GitHubHelper {
     * http://github-api.kohsuke.org/apidocs/org/kohsuke/github/GHDeploymentBuilder.html
     * */
     static long createDeployment(String url, String ref, Map deploymentConfig) {
-        return -1;
-        /*
+        long deploymentId = -1
         GHDeploymentBuilder builder=getGitHubRepository(url).createDeployment(ref)
+        /*
         if (deploymentConfig!=null) {
             if (deploymentConfig.environment) {
                 builder.environment(deploymentConfig.environment)
@@ -69,6 +69,8 @@ class GitHubHelper {
         builder=null;
         return deploymentId
         */
+
+        return deploymentId
     }
 
     static long createDeployment(CpsScript script, String ref, Map deploymentConfig) {
