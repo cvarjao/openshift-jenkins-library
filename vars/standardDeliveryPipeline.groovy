@@ -31,7 +31,7 @@ def call(body) {
         agent none
         stages {
             stage('Prepare') {
-                agent none
+                agent { label 'master' }
                 when { expression { return true } }
                 steps {
                     script { abortAllPreviousBuildInProgress }
