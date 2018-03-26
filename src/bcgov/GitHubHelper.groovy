@@ -25,14 +25,15 @@ class GitHubHelper {
         return getGitHubRepository(script).createDeployment(ref)
     }
 
-    @NonCPS
+
     static def createDeploymentStatus(CpsScript script, long deploymentId, GHDeploymentState state) {
         return getGitHubRepository(script).getDeployment(deploymentId).createStatus(state)
     }
-    
+
     /*
     * http://github-api.kohsuke.org/apidocs/org/kohsuke/github/GHDeploymentBuilder.html
     * */
+    @NonCPS
     static long createDeployment(CpsScript script, String ref, Map deploymentConfig) {
         def ghDeploymentResponse=createDeployment(script, ref)
 

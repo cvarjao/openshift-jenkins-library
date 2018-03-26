@@ -49,7 +49,7 @@ def call(body) {
                 steps {
                     script {
                         abortAllPreviousBuildInProgress
-                        echo sh(script: 'env|sort', returnStdout: true)
+                        //echo sh(script: 'env|sort', returnStdout: true)
                     }
                     checkout scm
                     script {
@@ -80,7 +80,7 @@ def call(body) {
                     script {
                         echo 'Deploying'
                         String envName="dev-pr-${metadata.pullRequestNumber}"
-                        long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit).environment(envName).create().getId()
+                        long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
 
                         //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
                         unstash(name: 'openshift')
