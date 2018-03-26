@@ -36,8 +36,8 @@ def call(body) {
                 agent none
                 when { expression { return true } }
                 steps {
-                    script { abortAllPreviousBuildInProgress(currentBuild) }
                     script {
+                        abortAllPreviousBuildInProgress(currentBuild)
                         GitHubHelper.getPullRequest(this).comment("Starting pipeline [build #${currentBuild.number}]()")
                     }
                 }
@@ -49,7 +49,7 @@ def call(body) {
                     script { abortAllPreviousBuildInProgress }
                     checkout scm
                     script {
-                        GitHubHelper.getPullRequest(this).comment("Build in progress")
+                        //GitHubHelper.getPullRequest(this).comment("Build in progress")
                         loadBuildMetadata(metadata);
                         echo "metadata:\n${metadata}"
                         def stashIncludes=[]
@@ -65,7 +65,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.bcModels
                         ])
-                        GitHubHelper.getPullRequest(this).comment("Build complete")
+                        //GitHubHelper.getPullRequest(this).comment("Build complete")
                     } //end script
                 }
             }
@@ -75,7 +75,7 @@ def call(body) {
                 steps {
                     script {
                         echo 'Deploying'
-                        GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
+                        //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
                         unstash(name: 'openshift')
                         new OpenShiftHelper().deploy(this,[
                                 'projectName': 'csnr-devops-lab-deploy',
@@ -83,7 +83,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.dcModels
                         ])
-                        GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
+                        //GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
                     } //end script
                 }
             } // end stage
