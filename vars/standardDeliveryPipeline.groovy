@@ -26,7 +26,7 @@ def call(body) {
         options {
             // Keep 10 builds at a time
             buildDiscarder(logRotator(numToKeepStr:'10'))
-            skipDefaultCheckout()
+            skipDefaultCheckout(currentBuild)
         }
         agent none
         stages {
