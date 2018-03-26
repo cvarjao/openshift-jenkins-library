@@ -561,6 +561,7 @@ class OpenShiftHelper {
         script.echo 'Scaling-up application'
         openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
             def o=dc.object();
+            script.echo "Scaling ${o.metadata.name}"
             openshift.selector(dc.name()).scale("--replicas=${replicas[o.metadata.name]}", '--timeout=2m')
         }
         script.echo 'Waiting for pods to become ready'

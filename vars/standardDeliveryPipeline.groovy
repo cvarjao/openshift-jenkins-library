@@ -31,10 +31,16 @@ def call(body) {
         agent none
         stages {
             stage('Prepare') {
+                agent none
+                when { expression { return true } }
+                steps {
+                    script { abortAllPreviousBuildInProgress }
+                }
+            }
+            stage('Build') {
                 agent { label 'maven' }
                 when { expression { return true } }
                 steps {
-                    milestone(1)
                     script { abortAllPreviousBuildInProgress }
                     checkout scm
                     script {
@@ -47,33 +53,16 @@ def call(body) {
                             }
                         }
                         stash(name: 'openshift', includes:stashIncludes.join(','))
-                    } //end script
-                }
-            }
-            stage('GitHub Deployment (Start)') {
-                agent any
-                when { expression { return false} }
-                steps {
-                    script {
-                        ghDeployment(metadata.commit, "PREVIEW")
-                    }
-                }
-            }
-            stage('Build') {
-                agent any
-                when { expression { return true} }
-                steps {
-                    script {
                         echo 'Building ...'
                         unstash(name: 'openshift')
                         new OpenShiftHelper().build(this,[
-                            'metadata': metadata,
-                            'models': context.bcModels
+                                'metadata': metadata,
+                                'models': context.bcModels
                         ])
 
                     } //end script
-                } //end steps
-            } // end stage
+                }
+            }
             stage('deploy - DEV') {
                 agent any
                 when { expression { return true} }
