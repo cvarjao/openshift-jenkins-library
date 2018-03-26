@@ -47,7 +47,7 @@ class GitHubHelper {
         builder.environment(deploymentConfig.environment)
         builder.autoMerge(false)
         builder.requiredContexts([])
-        builder.create()
+        deploymentId=builder.create().getId()
 
         //deployment=null
         /*
