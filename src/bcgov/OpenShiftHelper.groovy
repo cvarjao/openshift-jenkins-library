@@ -487,7 +487,7 @@ class OpenShiftHelper {
             if (o.metadata.annotations && o.metadata.annotations['replicas'] && o.metadata.annotations['replicas'].length() != 0){
                 replicas[o.metadata.name]=o.metadata.annotations['replicas']
             }else{
-                dc.annotate(['replicas':o.spec.replicas])
+                dc.annotate(['replicas':o.spec.replicas], "--overwrite")
                 replicas[o.metadata.name]=o.spec.replicas
             }
 
