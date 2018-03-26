@@ -507,6 +507,13 @@ class OpenShiftHelper {
 
         selector.label(['app':"${appName}-${envName}", 'app-name':"${appName}", 'env-name':"${envName}"], "--overwrite")
 
+        openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
+            def o = dc.object()
+            if (!(o.metadata.annotations && o.metadata.annotations['replicas'] && o.metadata.annotations['replicas'].length() != 0)){
+                dc.annotate(['replicas':replicas[o.metadata.name]], "--overwrite")
+            }
+        }
+
         script.echo "Tagging images"
         openshift.selector( 'is', dcSelector).withEach { imageStream ->
             def o=imageStream.object()
