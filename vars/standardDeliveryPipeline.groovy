@@ -90,7 +90,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.dcModels
                         ])
-                        GitHubHelper.createDeploymentStatus(this, ghDeploymentId, GHDeploymentState.SUCCESS).create()
+                        //GitHubHelper.createDeploymentStatus(this, ghDeploymentId, GHDeploymentState.SUCCESS).create()
                         //GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
                     } //end script
                 }
