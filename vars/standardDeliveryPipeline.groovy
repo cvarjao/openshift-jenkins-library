@@ -71,6 +71,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.bcModels
                         ])
+                        new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
                         //GitHubHelper.getPullRequest(this).comment("Build complete")
                     } //end script
                 }

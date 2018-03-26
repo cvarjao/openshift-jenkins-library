@@ -92,8 +92,9 @@ class GitHubHelper {
         return createDeployment(script.scm.getUserRemoteConfigs()[0].getUrl(), ref, deploymentConfig)
     }
 
-    static long createDeploymentStatus(CpsScript script, long deploymentId, String statusName, Map deploymentStatusConfig) {
-        def ghRepo=getGitHubRepository(script)
+    @NonCPS
+    static long createDeploymentStatus(String url, long deploymentId, String statusName, Map deploymentStatusConfig) {
+        def ghRepo=getGitHubRepository(url)
         def ghDeploymentState=GHDeploymentState.valueOf(statusName)
 
         def ghDeploymentStatus=ghRepo.getDeployment(deploymentId).createStatus(ghDeploymentState)
@@ -105,5 +106,9 @@ class GitHubHelper {
             ghDeploymentStatus.targetUrl(deploymentStatusConfig.targetUrl)
         }
         return ghDeploymentStatus.create().getId()
+    }
+    static long createDeploymentStatus(CpsScript script, long deploymentId, String statusName, Map config) {
+        script.echo "deploymentId:${deploymentId} - status:${statusName} - config:${config}"
+        return createDeploymentStatus(script.scm.getUserRemoteConfigs()[0].getUrl(), deploymentId, statusName, config)
     }
 }
