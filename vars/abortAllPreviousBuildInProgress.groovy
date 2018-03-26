@@ -1,6 +1,6 @@
 
-def call() {
-    //while(currentBuild.rawBuild.getPreviousBuildInProgress() != null) {
-    //    currentBuild.rawBuild.getPreviousBuildInProgress().doKill()
-    //}
+def call(currentBuild) {
+    while(currentBuild.rawBuild.getPreviousBuildInProgress() != null) {
+        currentBuild.rawBuild.getPreviousBuildInProgress().doKill()
+    }
 }

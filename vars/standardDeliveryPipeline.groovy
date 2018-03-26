@@ -31,11 +31,10 @@ def call(body) {
         agent none
         stages {
             stage('Prepare') {
-                agent { label 'master' }
+                agent none
                 when { expression { return true } }
                 steps {
-                    echo 'todo:Cancel previous builds'
-                    //script { abortAllPreviousBuildInProgress }
+                    script { abortAllPreviousBuildInProgress(currentBuild) }
                 }
             }
             stage('Build') {
