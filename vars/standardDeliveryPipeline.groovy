@@ -39,7 +39,7 @@ def call(body) {
                 steps {
                     script {
                         abortAllPreviousBuildInProgress(currentBuild)
-                        GitHubHelper.getPullRequest(this).comment("Starting pipeline [build #${currentBuild.number}]()")
+                        //GitHubHelper.getPullRequest(this).comment("Starting pipeline [build #${currentBuild.number}]()")
                     }
                 }
             }
@@ -53,8 +53,10 @@ def call(body) {
                     }
                     checkout scm
                     script {
-                        //GitHubHelper.getPullRequest(this).comment("Build in progress")
                         loadBuildMetadata(metadata);
+                        long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':'build'])
+                        //GitHubHelper.getPullRequest(this).comment("Build in progress")
+
                         echo "metadata:\n${metadata}"
                         def stashIncludes=[]
                         for ( def templateCfg : context.bcModels + context.dcModels){
