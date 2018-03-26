@@ -45,8 +45,8 @@ class GitHubHelper {
         long deploymentId = -1
         GHDeploymentBuilder builder=getGitHubRepository(url).createDeployment(ref)
         builder.environment(deploymentConfig.environment)
-        GHDeployment deployment = builder.create()
-        deployment=null
+        deploymentId = builder.create().getId()
+        //deployment=null
         /*
         if (deploymentConfig!=null) {
             if (deploymentConfig.environment) {
