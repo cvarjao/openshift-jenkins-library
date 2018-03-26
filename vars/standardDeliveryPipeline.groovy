@@ -85,7 +85,7 @@ def call(body) {
                     script {
                         echo 'Deploying'
                         String envName="dev-pr-${metadata.pullRequestNumber}"
-                        long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
+                        //long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
 
                         //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
                         unstash(name: 'openshift')
