@@ -42,14 +42,15 @@ class GitHubHelper {
     * */
     @NonCPS
     def createDeployment(String url, String ref, Map deploymentConfig) {
-        long deploymentId = -1
+        //long deploymentId = -1
         GHRepository repository=getGitHubRepository(url)
 
+        /*
         for (GHDeployment deployment:repository.listDeployments(null, ref, null, deploymentConfig.environment)){
             deployment.createStatus(GHDeploymentState.PENDING).create()
             return deployment.getId()
         }
-
+        */
         GHDeploymentBuilder builder=repository.createDeployment(ref)
         builder.environment(deploymentConfig.environment)
         builder.autoMerge(false)
