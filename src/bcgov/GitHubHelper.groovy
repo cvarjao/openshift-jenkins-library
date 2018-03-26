@@ -24,12 +24,12 @@ class GitHubHelper {
     }
 
 
-    static def createDeployment(CpsScript script, String ref) {
+    static GHDeploymentBuilder createDeployment(CpsScript script, String ref) {
         return getGitHubRepository(script).createDeployment(ref)
     }
 
 
-    static def createDeployment(String url, String ref) {
+    static GHDeploymentBuilder createDeployment(String url, String ref) {
         return getGitHubRepository(url).createDeployment(ref)
     }
 
@@ -41,30 +41,30 @@ class GitHubHelper {
     * http://github-api.kohsuke.org/apidocs/org/kohsuke/github/GHDeploymentBuilder.html
     * */
     static long createDeployment(String url, String ref, Map deploymentConfig) {
-        def ghDeploymentResponse=createDeployment(url, ref)
+        GHDeploymentBuilder builder=getGitHubRepository(url).createDeployment(ref)
         if (deploymentConfig!=null) {
             if (deploymentConfig.environment) {
-                ghDeploymentResponse.environment(deploymentConfig.environment)
+                builder.environment(deploymentConfig.environment)
             }
 
             if (deploymentConfig.payload) {
-                ghDeploymentResponse.payload(deploymentConfig.payload)
+                builder.payload(deploymentConfig.payload)
             }
 
             if (deploymentConfig.description) {
-                ghDeploymentResponse.description(deploymentConfig.description)
+                builder.description(deploymentConfig.description)
             }
 
             if (deploymentConfig.task) {
-                ghDeploymentResponse.task(deploymentConfig.task)
+                builder.task(deploymentConfig.task)
             }
 
             if (deploymentConfig.requiredContexts) {
-                ghDeploymentResponse.requiredContexts(deploymentConfig.requiredContexts)
+                builder.requiredContexts(deploymentConfig.requiredContexts)
             }
         }
-        long deploymentId = ghDeploymentResponse.create().getId()
-        ghDeploymentResponse=null;
+        long deploymentId = builder.create().getId()
+        builder=null;
         return deploymentId
     }
 
