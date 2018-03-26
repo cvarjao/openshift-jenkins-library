@@ -14,7 +14,7 @@ class GitHubHelper {
         return getGitHubRepository(script.scm.getUserRemoteConfigs()[0].getUrl())
     }
     static GHRepository getGitHubRepository(String url){
-        return GitHubRepositoryName.resolveOne(url)
+        return GitHubRepositoryName.create(url).resolveOne()
     }
 
     /*
