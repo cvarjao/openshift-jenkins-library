@@ -53,10 +53,12 @@ def call(body) {
                     }
                     checkout scm
                     script {
-                        loadBuildMetadata(metadata)
+
                         def ghDeploymentId = new GitHubHelper().createDeployment(this, GitHubHelper.getPullRequest(this).getHead().getSha(), ['environment':'build'])
                         //GitHubHelper.getPullRequest(this).comment("Build in progress")
+                        new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
 
+                        loadBuildMetadata(metadata)
                         echo "metadata:\n${metadata}"
                         def stashIncludes=[]
                         for ( def templateCfg : context.bcModels + context.dcModels){
@@ -71,7 +73,7 @@ def call(body) {
                                 'metadata': metadata,
                                 'models': context.bcModels
                         ])
-                        new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
+
                         //GitHubHelper.getPullRequest(this).comment("Build complete")
                     } //end script
                 }
