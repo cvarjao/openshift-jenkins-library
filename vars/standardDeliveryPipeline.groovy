@@ -37,9 +37,9 @@ def call(body) {
                 agent none
                 when { expression { return true } }
                 steps {
-                    sh 'printenv'
                     script {
                         abortAllPreviousBuildInProgress(currentBuild)
+                        echo sh(script: 'env|sort', returnStdout: true)
                         GitHubHelper.getPullRequest(this).comment("Starting pipeline [build #${currentBuild.number}]()")
                     }
                 }
