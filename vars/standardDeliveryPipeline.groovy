@@ -54,7 +54,7 @@ def call(body) {
                     checkout scm
                     script {
                         loadBuildMetadata(metadata)
-                        long ghDeploymentId = GitHubHelper.createDeployment(this, GitHubHelper.getPullRequest(this).getHead().getSha(), ['environment':'build'])
+                        long ghDeploymentId = new GitHubHelper().createDeployment(this, GitHubHelper.getPullRequest(this).getHead().getSha(), ['environment':'build'])
                         //GitHubHelper.getPullRequest(this).comment("Build in progress")
 
                         echo "metadata:\n${metadata}"
