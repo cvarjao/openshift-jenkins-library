@@ -80,7 +80,7 @@ class GitHubHelper {
     long createDeployment(CpsScript script, String ref, Map deploymentConfig) {
         script.echo "ref:${ref} - config:${deploymentConfig}"
         createDeployment(script.scm.getUserRemoteConfigs()[0].getUrl(), ref, deploymentConfig)
-
+        return -1;
     }
 
     static long createDeploymentStatus(CpsScript script, long deploymentId, String statusName, Map deploymentStatusConfig) {
