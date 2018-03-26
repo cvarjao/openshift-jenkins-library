@@ -43,7 +43,6 @@ class GitHubHelper {
     @NonCPS
     static long createDeployment(String url, String ref, Map deploymentConfig) {
         def ghDeploymentResponse=createDeployment(url, ref)
-
         if (deploymentConfig!=null) {
             if (deploymentConfig.environment) {
                 ghDeploymentResponse.environment(deploymentConfig.environment)
@@ -65,7 +64,9 @@ class GitHubHelper {
                 ghDeploymentResponse.requiredContexts(deploymentConfig.requiredContexts)
             }
         }
-        return ghDeploymentResponse.create().getId()
+        long deploymentId = ghDeploymentResponse.create().getId()
+        ghDeploymentResponse=null;
+        return deploymentId
     }
 
     static long createDeployment(CpsScript script, String ref, Map deploymentConfig) {
