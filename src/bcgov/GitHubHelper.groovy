@@ -41,13 +41,13 @@ class GitHubHelper {
     * http://github-api.kohsuke.org/apidocs/org/kohsuke/github/GHDeploymentBuilder.html
     * */
     @NonCPS
-    GHDeployment createDeployment(String url, String ref, Map deploymentConfig) {
-        //long deploymentId = -1
+    def createDeployment(String url, String ref, Map deploymentConfig) {
+        long deploymentId = -1
         GHDeploymentBuilder builder=getGitHubRepository(url).createDeployment(ref)
         builder.environment(deploymentConfig.environment)
         builder.autoMerge(false)
         builder.requiredContexts([])
-        return builder.create()
+
 
         //deployment=null
         /*
@@ -77,12 +77,12 @@ class GitHubHelper {
         return deploymentId
         */
 
-        //return deploymentId
+        return builder.create().getId()
     }
 
-    GHDeployment createDeployment(CpsScript script, String ref, Map deploymentConfig) {
+    long createDeployment(CpsScript script, String ref, Map deploymentConfig) {
         script.echo "ref:${ref} - config:${deploymentConfig}"
-        createDeployment(script.scm.getUserRemoteConfigs()[0].getUrl(), ref, deploymentConfig)
+        return createDeployment(script.scm.getUserRemoteConfigs()[0].getUrl(), ref, deploymentConfig)
     }
 
     static long createDeploymentStatus(CpsScript script, long deploymentId, String statusName, Map deploymentStatusConfig) {
