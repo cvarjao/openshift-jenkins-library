@@ -22,6 +22,11 @@ def call(body) {
 
     def metadata=['appName':context.name]
 
+    properties([
+            [$class: 'BuildConfigProjectProperty', name: '', namespace: '', resourceVersion: '', uid: ''],
+            buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20'))
+    ])
+
     stage('Prepare') {
         abortAllPreviousBuildInProgress(currentBuild)
         echo "BRANCH_NAME=${env.BRANCH_NAME}\nCHANGE_ID=${env.CHANGE_ID}\nCHANGE_TARGET=${env.CHANGE_TARGET}\nBUILD_URL=${env.BUILD_URL}"
