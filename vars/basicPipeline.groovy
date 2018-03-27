@@ -22,14 +22,62 @@ def call(body) {
 
     def metadata=['appName':context.name]
 
-    stage('Prepare') {}
-    stage('Build') {}
-    for(String stageDeployName: context.env.keySet() as String[]){
-        stageDeployName=stageDeployName.toUpperCase()
-        if (!"DEV".equalsIgnoreCase(stageDeployName)){
-            stage("Approve - ${stageDeployName}") { echo "${stageDeployName}"}
+    stage('Prepare') {
+        abortAllPreviousBuildInProgress(currentBuild)
+        echo "BRANCH_NAME=${env.BRANCH_NAME}\nCHANGE_ID=${env.CHANGE_ID}\nCHANGE_TARGET=${env.CHANGE_TARGET}\nBUILD_URL=${env.BUILD_URL}"
+    }
+    stage('Build') {
+        node('master') {
+            checkout scm
+            def ghDeploymentId = new GitHubHelper().createDeployment(this, GitHubHelper.getPullRequest(this).getHead().getSha(), ['environment':'build'])
+            //GitHubHelper.getPullRequest(this).comment("Build in progress")
+            new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
+
+            loadBuildMetadata(metadata)
+            //echo "metadata:\n${metadata}"
+            def stashIncludes=[]
+            for ( def templateCfg : context.bcModels + context.dcModels){
+                if ('-f'.equalsIgnoreCase(templateCfg[0])){
+                    stashIncludes.add(templateCfg[1])
+                }
+            }
+            stash(name: 'openshift', includes:stashIncludes.join(','))
+            echo 'Building ...'
+            unstash(name: 'openshift')
+            new OpenShiftHelper().build(this,[
+                    'metadata': metadata,
+                    'models': context.bcModels
+            ])
+
+            //GitHubHelper.getPullRequest(this).comment("Build complete")
         }
-        stage("Deploy - ${stageDeployName}") { echo "${stageDeployName}"}
+    }
+    for(String envKeyName: context.env.keySet() as String[]){
+        stageDeployName=envKeyName.toUpperCase()
+        if (!"DEV".equalsIgnoreCase(stageDeployName)){
+            stage("Approve - ${stageDeployName}") {
+                input id: "deploy_${stageDeployName.toLowerCase()}", message: "Deploy to ${stageDeployName}?", ok: 'Approve', submitterParameter: 'approved_by'
+            }
+        }
+        stage("Deploy - ${stageDeployName}") {
+            echo "Deploying to ${stageDeployName}"
+            String envName=stageDeployName.toLowerCase()
+            if ("DEV".equalsIgnoreCase(stageDeployName)){
+                envName="dev-pr-${metadata.pullRequestNumber}"
+            }
+            //long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
+
+            //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
+            unstash(name: 'openshift')
+            new OpenShiftHelper().deploy(this,[
+                    'projectName': context.env[envKeyName].project,
+                    'envName': envName,
+                    'metadata': metadata,
+                    'models': context.dcModels
+            ])
+            //GitHubHelper.createDeploymentStatus(this, ghDeploymentId, GHDeploymentState.SUCCESS).create()
+            //GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
+        }
 
     }
     stage('Cleanup') { }
