@@ -60,23 +60,25 @@ def call(body) {
             }
         }
         stage("Deploy - ${stageDeployName}") {
-            echo "Deploying to ${stageDeployName}"
-            String envName=stageDeployName.toLowerCase()
-            if ("DEV".equalsIgnoreCase(stageDeployName)){
-                envName="dev-pr-${metadata.pullRequestNumber}"
-            }
-            //long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
+            node('master') {
+                echo "Deploying to ${stageDeployName}"
+                String envName = stageDeployName.toLowerCase()
+                if ("DEV".equalsIgnoreCase(stageDeployName)) {
+                    envName = "dev-pr-${metadata.pullRequestNumber}"
+                }
+                //long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
 
-            //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
-            unstash(name: 'openshift')
-            new OpenShiftHelper().deploy(this,[
-                    'projectName': context.env[envKeyName].project,
-                    'envName': envName,
-                    'metadata': metadata,
-                    'models': context.dcModels
-            ])
-            //GitHubHelper.createDeploymentStatus(this, ghDeploymentId, GHDeploymentState.SUCCESS).create()
-            //GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
+                //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
+                unstash(name: 'openshift')
+                new OpenShiftHelper().deploy(this, [
+                        'projectName': context.env[envKeyName].project,
+                        'envName'    : envName,
+                        'metadata'   : metadata,
+                        'models'     : context.dcModels
+                ])
+                //GitHubHelper.createDeploymentStatus(this, ghDeploymentId, GHDeploymentState.SUCCESS).create()
+                //GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
+            }
         }
 
     }
