@@ -49,6 +49,7 @@ def call(body) {
                 steps {
                     script {
                         abortAllPreviousBuildInProgress
+                        echo "BRANCH_NAME=${env.BRANCH_NAME}\nCHANGE_ID=${env.CHANGE_ID}\nCHANGE_TARGET=${env.CHANGE_TARGET}\nBUILD_URL=${env.BUILD_URL}"
                         //echo sh(script: 'env|sort', returnStdout: true)
                     }
                     checkout scm

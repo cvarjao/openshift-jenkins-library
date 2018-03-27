@@ -225,7 +225,7 @@ class OpenShiftHelper {
         def updates=[]
 
         for (Object o in models) {
-            script.echo "Processing '${o.kind}/${o.metadata.name}' (before apply)"
+            if (logLevel >= 4 ) script.echo "Processing '${o.kind}/${o.metadata.name}' (before apply)"
             if (o.metadata.labels==null) o.metadata.labels =[:]
             o.metadata.labels["app"] = "${appName}-${envName}"
             o.metadata.labels["app-name"] = "${appName}"
@@ -284,7 +284,7 @@ class OpenShiftHelper {
             buildNameSelector = buildSelector.name()
         } else {
             buildNameSelector = buildSelector.name()
-            script.echo "Skipping new build. Reusing '${buildNameSelector}'"
+            script.echo "Reusing '${buildNameSelector}'"
             //def build=buildSelector.object()
             //echo "OutputImageDigest: '${build.status.output.to.imageDigest}'"
             //echo "outputDockerImageReference: '${build.status.outputDockerImageReference}'"
