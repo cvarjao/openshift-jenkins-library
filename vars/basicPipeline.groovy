@@ -60,7 +60,7 @@ def call(body) {
                         new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
 
                         loadBuildMetadata(metadata)
-                        echo "metadata:\n${metadata}"
+                        //echo "metadata:\n${metadata}"
                         def stashIncludes=[]
                         for ( def templateCfg : context.bcModels + context.dcModels){
                             if ('-f'.equalsIgnoreCase(templateCfg[0])){
