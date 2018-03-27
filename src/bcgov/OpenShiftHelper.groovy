@@ -4,6 +4,8 @@ import org.jenkinsci.plugins.workflow.cps.CpsScript;
 import com.openshift.jenkins.plugins.OpenShiftDSL;
 
 class OpenShiftHelper {
+    int logLevel=0
+
     @NonCPS
     private def getImageChangeTriggerBuildConfig(m, models) {
         if (m.spec.triggers){
@@ -37,17 +39,18 @@ class OpenShiftHelper {
         //File bcScriptFactoryFile=new File(script.pwd(), 'openshift.bc.groovy');
         //script.echo "bcScriptFactoryFile:${bcScriptFactoryFile.getText()}"
 
-        script.echo "openShiftBuild:openshift1:${openshift.dump()}"
+
+        if (logLevel >= 4 ) script.echo "openShiftBuild:openshift1:${openshift.dump()}"
         openshift.withCluster() {
-            script.echo "openShiftBuild:openshift2:${openshift.dump()}"
+            if (logLevel >= 4 ) script.echo "openShiftBuild:openshift2:${openshift.dump()}"
             openshift.withProject(openshift.project()) {
                 def models = [];
                 def metadata = __context.metadata;
 
-                script.echo "openShiftBuild:openshift3:${openshift.dump()}"
-                script.echo "openShiftBuild: project:${openshift.project()}"
+                if (logLevel >= 4 ) script.echo "openShiftBuild:openshift3:${openshift.dump()}"
+                if (logLevel >= 1 ) script.echo "openShiftBuild: project:${openshift.project()}"
 
-                script.echo "metadata:\n${metadata}"
+                if (logLevel >= 4 ) script.echo "metadata:\n${metadata}"
 
                 if (__context.models != null) {
                     def modelsDef = __context.models
@@ -108,7 +111,7 @@ class OpenShiftHelper {
 
                 for (m in models) {
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
-                        script.echo "Processing 'bc/${m.metadata.name}'"
+                        if (logLevel >= 1 ) script.echo "Processing 'bc/${m.metadata.name}'"
                         String commitId = m.metadata.annotations['spec.source.git.ref']
                         if (m.status==null) m.status=[:]
                         def startNewBuild=true
@@ -200,19 +203,18 @@ class OpenShiftHelper {
 
     private def applyBuildConfig(CpsScript script, OpenShiftDSL openshift, appName, envName, models) {
         //def body = {
-        script.echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
-        script.echo "openShiftBuild:openshift2:${openshift.dump()}"
+        if (logLevel >= 4 ) script.echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
+        if (logLevel >= 4 ) script.echo "openShiftBuild:openshift2:${openshift.dump()}"
         //} //end 'body 'closure
 
         def bcSelector = ['app-name': appName, 'env-name': envName];
 
-        script.echo "openShiftApplyBuildConfig:openshift1:${openshift.dump()}"
+        if (logLevel >= 4 ) script.echo "openShiftApplyBuildConfig:openshift1:${openshift.dump()}"
 
         script.echo "Cancelling all pending builds"
         if (openshift.selector('bc', bcSelector).count() >0 ){
             openshift.selector('bc', bcSelector).cancelBuild();
         }
-
         script.echo "Waiting for all pending builds to complete or cancel"
         
         waitForBuildsWithSelector(script, openshift, openshift.selector('builds', bcSelector));
@@ -231,15 +233,15 @@ class OpenShiftHelper {
 
             def sel=openshift.selector("${o.kind}/${o.metadata.name}")
             if (sel.count()==0){
-                script.echo "Creating '${o.kind}/${o.metadata.name}'"
+                //script.echo "Creating '${o.kind}/${o.metadata.name}'"
                 creations.add(o)
             }else{
                 if (!'ImageStream'.equalsIgnoreCase("${o.kind}")){
-                    script.echo "Updating '${o.kind}/${o.metadata.name}'"
+                    //script.echo "Updating '${o.kind}/${o.metadata.name}'"
                     updates.add(o);
                 }else{
-                    script.echo "Skipping '${o.kind}/${o.metadata.name}' (Already Exists)"
-                    def newObject=o;
+                    //script.echo "Skipping '${o.kind}/${o.metadata.name}' (Already Exists)"
+                    def newObject=o
                     if (newObject.spec && newObject.spec.tags){
                         newObject.spec.remove('tags')
                     }
@@ -312,7 +314,7 @@ class OpenShiftHelper {
         def names=selector.names()
         if (names.size() > 0){
             for (String name:names){
-                script.echo "Checking status of '${name}'"
+                if (logLevel >= 3 ) script.echo "Checking status of '${name}'"
                 openshift.selector(name).watch {
                     return isBuildComplete(it.object())
                 }
@@ -362,16 +364,16 @@ class OpenShiftHelper {
         if (!context.dcPrefix) context.dcPrefix=metadata.appName
         if (!context.dcSuffix) context.dcSuffix="-${context.envName}"
 
-        script.echo "OpenShiftHelper.deploy: Deploying"
+        script.echo "Deploying to '${context.envName}'"
         openshift.withCluster() {
             def buildProjectName="${openshift.project()}"
             def buildImageStreams=[:]
 
-            script.echo "Collecting ImageStreams";
+            if (logLevel >= 4 ) script.echo "Collecting ImageStreams";
             openshift.selector( 'is', ['app-name':metadata.appName, 'env-name':metadata.buildEnvName]).freeze().withEach {
                 def iso=it.object()
                 String baseName=getImageStreamBaseName(iso)
-                script.echo "Build ImageStream '${iso.metadata.name}' baseName is '${baseName}'";
+                if (logLevel >= 4 ) script.echo "Build ImageStream '${iso.metadata.name}' baseName is '${baseName}'";
                 buildImageStreams[baseName]=iso
             }
 
@@ -441,7 +443,7 @@ class OpenShiftHelper {
                 if ('ImageChange'.equalsIgnoreCase(t['type'])){
                     for ( cn in t.imageChangeParams.containerNames){
                         if (cn.equalsIgnoreCase(c.name)){
-                            script.echo "${t.imageChangeParams.from}"
+                            if (logLevel >= 4 ) script.echo "${t.imageChangeParams.from}"
                             def dockerImageReference = '';
                             def selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
 
@@ -459,7 +461,7 @@ class OpenShiftHelper {
                                 }
                             }
 
-                            script.echo "ImageReference is '${dockerImageReference}'"
+                            if (logLevel >= 4 ) script.echo "ImageReference is '${dockerImageReference}'"
                             c.image = "${dockerImageReference}";
                         }
                     }
@@ -491,7 +493,7 @@ class OpenShiftHelper {
                 replicas[o.metadata.name]=o.spec.replicas
             }
 
-            script.echo "Pausing '${dc.name()}'"
+            if (logLevel >= 4 )  script.echo "Pausing '${dc.name()}'"
             if ( o.spec.paused == false ){
                 dc.rollout().pause()
             }
@@ -521,7 +523,7 @@ class OpenShiftHelper {
             def imageStreamBaseName=getImageStreamBaseName(o)
             def sourceImageStream=buildImageStreams[imageStreamBaseName]
 
-            script.echo "Build ImageStream '${imageStreamName}' baseName is '${imageStreamBaseName}'";
+            if (logLevel >= 4 ) script.echo "Build ImageStream '${imageStreamName}' baseName is '${imageStreamBaseName}'";
 
             if (sourceImageStream){
                 script.echo "Tagging '${buildProjectName}/${sourceImageStream.metadata.name}:latest' as '${o.metadata.name}:${envName}'"
@@ -563,27 +565,6 @@ class OpenShiftHelper {
             return allDone
         }
 
-        /*
-        if (openshift.selector( 'rc', dcSelector).count() > 0) {
-            script.echo 'Cancelling DeploymentConfigs'
-            script.echo "${openshift.selector('dc', dcSelector).freeze().rollout().cancel()}"
-            script.echo "Waiting for RCs to get cancelled"
-            //openshift.verbose(true);
-            openshift.selector('rc', dcSelector).watch { rcs ->
-                def allDone = true;
-                script.echo "Waiting for '${rcs.names()}'"
-
-                rcs.freeze().withEach { rc ->
-                    def o = rc.object();
-                    def phase = o.metadata.annotations['openshift.io/deployment.phase']
-                    if (!('Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))) {
-                        allDone = false;
-                    }
-                }
-                return allDone;
-            }
-        }
-        */
         script.echo "Deployments:"
         openshift.selector( 'dc', dcSelector).freeze().rollout().latest()
 
@@ -623,13 +604,6 @@ class OpenShiftHelper {
         }
         openshift.selector( 'dc', dcSelector).annotate(['replicas':''], "--overwrite")
 
-        //openshift.selector("dc/nginx").rollout().resume()
-
-        //openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
-        //script.echo "deploy:\n${openshift.selector( 'dc', dcSelector).rollout().cancel()}"
-        //script.echo "deploy:\n${openshift.selector( 'dc', dcSelector).rollout().latest()}"
-        //script.echo "deploy:\n${openshift.selector( 'dc', dcSelector).rollout().status()}"
-        //openshift.selector( 'dc', dcSelector).scale('--replicas=1', '--timeout=4m')
     }
 
 } // end class
