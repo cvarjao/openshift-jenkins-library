@@ -24,12 +24,12 @@ def call(body) {
 
     stage('Prepare') {}
     stage('Build') {}
-    for(def deployEnv: context.env){
-        def stageDeployName=deployEnv.key.toUpperCase()
+    for(String stageDeployName: context.env.keySet() as String[]){
+        stageDeployName=stageDeployName.toUpperCase()
         if (!"DEV".equalsIgnoreCase(stageDeployName)){
-            stage("Approve - ${stageDeployName}") { echo "${deployEnv.key}"}
+            stage("Approve - ${stageDeployName}") { echo "${stageDeployName}"}
         }
-        stage("Deploy - ${stageDeployName}") { echo "${deployEnv.key}"}
+        stage("Deploy - ${stageDeployName}") { echo "${stageDeployName}"}
 
     }
     stage('Cleanup') { }
