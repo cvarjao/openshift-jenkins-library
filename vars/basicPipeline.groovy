@@ -91,7 +91,7 @@ def call(body) {
                         //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
                         unstash(name: 'openshift')
                         new OpenShiftHelper().deploy(this,[
-                                'projectName': 'csnr-devops-lab-deploy',
+                                'projectName': context.env['dev'].project,
                                 'envName': envName,
                                 'metadata': metadata,
                                 'models': context.dcModels
@@ -136,7 +136,7 @@ def call(body) {
                 when { expression { return "master".equalsIgnoreCase(env.CHANGE_TARGET)} }
                 steps {
                     script {
-                        String envName = "test"
+                        String envName = "prod"
                         unstash(name: 'openshift')
                         new OpenShiftHelper().deploy(this, [
                                 'projectName': context.env[envName].project,
