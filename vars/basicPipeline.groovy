@@ -21,8 +21,19 @@ def call(body) {
     body()
 
     def metadata=['appName':context.name]
-    
 
+    stage('Prepare') {}
+    stage('Build') {}
+    for(def deployEnv: context.env){
+        if (!"DEV".equalsIgnoreCase(${deployEnv.key.toUppercase()})){
+            stage("Approve - ${deployEnv.key.toUppercase()}") { echo "${deployEnv.key}"}
+        }
+        stage("Deploy - ${deployEnv.key.toUppercase()}") { echo "${deployEnv.key}"}
+
+    }
+    stage('Cleanup') { }
+
+    /*
     pipeline {
         // The options directive is for configuration that applies to the whole job.
         options {
@@ -155,5 +166,5 @@ def call(body) {
             }
         }
     }
-
+    */
 }
