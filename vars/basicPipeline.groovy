@@ -54,30 +54,33 @@ def call(body) {
     }
     for(String envKeyName: context.env.keySet() as String[]){
         stageDeployName=envKeyName.toUpperCase()
-        if (!"DEV".equalsIgnoreCase(stageDeployName)){
+        if (!"DEV".equalsIgnoreCase(stageDeployName) && "master".equalsIgnoreCase(env.CHANGE_TARGET)){
             stage("Approve - ${stageDeployName}") {
                 input id: "deploy_${stageDeployName.toLowerCase()}", message: "Deploy to ${stageDeployName}?", ok: 'Approve', submitterParameter: 'approved_by'
             }
         }
-        stage("Deploy - ${stageDeployName}") {
-            node('master') {
-                echo "Deploying to ${stageDeployName}"
-                String envName = stageDeployName.toLowerCase()
-                if ("DEV".equalsIgnoreCase(stageDeployName)) {
-                    envName = "dev-pr-${metadata.pullRequestNumber}"
-                }
-                //long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
 
-                //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
-                unstash(name: 'openshift')
-                new OpenShiftHelper().deploy(this, [
-                        'projectName': context.env[envKeyName].project,
-                        'envName'    : envName,
-                        'metadata'   : metadata,
-                        'models'     : context.dcModels
-                ])
-                //GitHubHelper.createDeploymentStatus(this, ghDeploymentId, GHDeploymentState.SUCCESS).create()
-                //GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
+        if ("DEV".equalsIgnoreCase(stageDeployName) || "master".equalsIgnoreCase(env.CHANGE_TARGET)){
+            stage("Deploy - ${stageDeployName}") {
+                node('master') {
+                    echo "Deploying to ${stageDeployName}"
+                    String envName = stageDeployName.toLowerCase()
+                    if ("DEV".equalsIgnoreCase(stageDeployName)) {
+                        envName = "dev-pr-${metadata.pullRequestNumber}"
+                    }
+                    //long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
+
+                    //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
+                    unstash(name: 'openshift')
+                    new OpenShiftHelper().deploy(this, [
+                            'projectName': context.env[envKeyName].project,
+                            'envName'    : envName,
+                            'metadata'   : metadata,
+                            'models'     : context.dcModels
+                    ])
+                    //GitHubHelper.createDeploymentStatus(this, ghDeploymentId, GHDeploymentState.SUCCESS).create()
+                    //GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
+                }
             }
         }
 
