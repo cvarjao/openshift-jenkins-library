@@ -112,14 +112,16 @@ def call(body) {
                 agent any
                 when { expression { return "master".equalsIgnoreCase(env.CHANGE_TARGET) } }
                 steps {
-                    String envName="test"
-                    unstash(name: 'openshift')
-                    new OpenShiftHelper().deploy(this,[
-                            'projectName': context.env[envName].project,
-                            'envName': envName,
-                            'metadata': metadata,
-                            'models': context.dcModels
-                    ])
+                    script {
+                        String envName = "test"
+                        unstash(name: 'openshift')
+                        new OpenShiftHelper().deploy(this, [
+                                'projectName': context.env[envName].project,
+                                'envName'    : envName,
+                                'metadata'   : metadata,
+                                'models'     : context.dcModels
+                        ])
+                    }
                 }
             }
             stage('Approve - PROD') {
@@ -133,14 +135,16 @@ def call(body) {
                 agent any
                 when { expression { return "master".equalsIgnoreCase(env.CHANGE_TARGET)} }
                 steps {
-                    String envName="test"
-                    unstash(name: 'openshift')
-                    new OpenShiftHelper().deploy(this,[
-                            'projectName': context.env[envName].project,
-                            'envName': envName,
-                            'metadata': metadata,
-                            'models': context.dcModels
-                    ])
+                    script {
+                        String envName = "test"
+                        unstash(name: 'openshift')
+                        new OpenShiftHelper().deploy(this, [
+                                'projectName': context.env[envName].project,
+                                'envName'    : envName,
+                                'metadata'   : metadata,
+                                'models'     : context.dcModels
+                        ])
+                    }
                 }
             }
             stage('Cleanup') {
