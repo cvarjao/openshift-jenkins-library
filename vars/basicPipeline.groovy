@@ -101,28 +101,52 @@ def call(body) {
                     } //end script
                 }
             } // end stage
+            stage('Approve - TEST') {
+                agent none
+                when { expression { return "master".equalsIgnoreCase(env.CHANGE_TARGET)} }
+                steps {
+                    input id: 'deploy_test', message: 'Deploy to TEST?', ok: 'Approve', submitterParameter: 'approved_by'
+                }
+            }
             stage('Deploy - TEST') {
                 agent any
-                when { expression { return false} }
+                when { expression { return "master".equalsIgnoreCase(env.CHANGE_TARGET) } }
                 steps {
-                    echo "Testing ..."
-                    echo "Testing ... Done!"
+                    String envName="test"
+                    unstash(name: 'openshift')
+                    new OpenShiftHelper().deploy(this,[
+                            'projectName': context.env[envName].project,
+                            'envName': envName,
+                            'metadata': metadata,
+                            'models': context.dcModels
+                    ])
+                }
+            }
+            stage('Approve - PROD') {
+                agent none
+                when { expression { return "master".equalsIgnoreCase(env.CHANGE_TARGET)} }
+                steps {
+                    input id: 'deploy_prod', message: 'Deploy to PROD?', ok: 'Approve', submitterParameter: 'approved_by'
                 }
             }
             stage('Deploy - PROD') {
                 agent any
-                when { expression { return false} }
+                when { expression { return "master".equalsIgnoreCase(env.CHANGE_TARGET)} }
                 steps {
-                    echo "Packaging ..."
-                    echo "Packaging ... Done!"
+                    String envName="test"
+                    unstash(name: 'openshift')
+                    new OpenShiftHelper().deploy(this,[
+                            'projectName': context.env[envName].project,
+                            'envName': envName,
+                            'metadata': metadata,
+                            'models': context.dcModels
+                    ])
                 }
             }
             stage('Cleanup') {
                 agent any
-                when { expression { return false} }
                 steps {
-                    echo "Publishing ..."
-                    echo "Publishing ... Done!"
+                    echo "Merge and Close PR"
                 }
             }
         }
