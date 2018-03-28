@@ -93,8 +93,8 @@ class OpenShiftHelper {
             }
             script.sleep 5
             doCheck=false
-            for (Map dc:openshift.selector('builds', labels).objects()){
-                if (!isBuildComplete(object)) {
+            for (Map build:openshift.selector('builds', labels).objects()){
+                if (!isBuildComplete(build)) {
                     doCheck=true
                     break
                 }
