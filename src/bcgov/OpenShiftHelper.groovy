@@ -79,7 +79,7 @@ class OpenShiftHelper {
                 //def metadata = __context.metadata
 
                 def newObjects = loadObjectsFromTemplate(openshift, __context.bcModels, __context)
-                def currentObjects = loadObjectsByLabel(openshift, ['app-name': name, 'env-name': metadata.buildEnvName])
+                def currentObjects = loadObjectsByLabel(openshift, ['app-name': name, 'env-name': __context.buildEnvName])
 
                 for (Map m : newObjects.values()){
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
