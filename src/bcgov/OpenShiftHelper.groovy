@@ -43,7 +43,7 @@ class OpenShiftHelper {
                 }
             }
         }
-        return nodels
+        return models
     }
 
     private Map loadObjectsByLabel(OpenShiftDSL openshift, Map labels){
