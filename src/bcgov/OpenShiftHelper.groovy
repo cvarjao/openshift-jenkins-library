@@ -192,7 +192,8 @@ class OpenShiftHelper {
                     script.echo "${item}"
                     if ('BuildConfig'.equalsIgnoreCase(item.kind)){
                         Map newItem=postBuildConfigState[key(item)]
-                        if (item.status.lastVersion == newItem.status.lastVersion && !isBuildSuccesful(item)){
+                        Map build=initialBuildConfigState["Build/${item.metadata.name}-${item.status.lastVersion}"]
+                        if (item.status.lastVersion == newItem.status.lastVersion && !isBuildSuccesful(build)){
                             openshift.selector(key(item)).startBuild()
                             startedNewBuilds=true
                         }
