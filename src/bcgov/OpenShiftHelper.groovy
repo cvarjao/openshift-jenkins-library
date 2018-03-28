@@ -143,6 +143,27 @@ class OpenShiftHelper {
                 applyBuildConfig(script, openshift, __context.name, __context.buildEnvName, newObjects, currentObjects);
                 script.echo "Waiting for builds to complete"
                 waitForBuildsToComplete(script, openshift, labels)
+                context['build'] = [:]
+                for (Map bc:openshift.selector('bc', labels).objects()){
+                    String buildName="Build/${bc.metadata.name}-${bc.status.lastVersion}"
+                    Map build=openshift.selector(buildName).object()
+
+                    context['build']["${build.spec.output.to.kind}/${build.spec.output.to.name}"]=[
+                            'imageDigest':build.status.output.to.imageDigest,
+                            'outputDockerImageReference':build.status.outputDockerImageReference
+                    ]
+
+                    context['build'][buildName]=[
+                            'output':[
+                                    'to':[
+                                            'kind':build.spec.output.to.kind,
+                                            'name':build.spec.output.to.name
+                                    ]
+                            ]
+                    ]
+
+                }
+                echo "${context['build']}"
                 script.error('Stop here!')
 
                 /*
@@ -260,14 +281,6 @@ class OpenShiftHelper {
         def bcSelector = ['app-name': appName, 'env-name': envName]
 
         if (logLevel >= 4 ) script.echo "openShiftApplyBuildConfig:openshift1:${openshift.dump()}"
-        /*
-        script.echo "Cancelling all pending builds"
-        if (openshift.selector('bc', bcSelector).count() >0 ){
-            openshift.selector('bc', bcSelector).cancelBuild();
-        }
-        script.echo "Waiting for all pending builds to complete or cancel"
-        */
-        //waitForBuildsWithSelector(script, openshift, openshift.selector('builds', bcSelector));
 
 
         script.echo "Processing ${models.size()} objects for '${appName}' for '${envName}'"
@@ -311,13 +324,6 @@ class OpenShiftHelper {
             openshift.apply(updates);
         }
 
-        //body.resolveStrategy = Closure.DELEGATE_FIRST;
-        //body.delegate = script;
-        //body();
-
-        //def bcSelector=['app-name':appName, 'env-name':envName];
-        //echo "Cancelling all pending builds"
-        //openshift.selector( 'bc', bcSelector).cancelBuild();
     }
 
 
