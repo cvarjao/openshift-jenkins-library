@@ -147,21 +147,22 @@ class OpenShiftHelper {
                 for (Map bc:openshift.selector('bc', labels).objects()){
                     String buildName="Build/${bc.metadata.name}-${bc.status.lastVersion}"
                     Map build=openshift.selector(buildName).object()
-
-                    buildOutput["${build.spec.output.to.kind}/${build.spec.output.to.name}"]=[
-                            'imageDigest':build.status.output.to.imageDigest,
-                            'outputDockerImageReference':build.status.outputDockerImageReference
-                    ]
-
                     buildOutput[buildName]=[
                             'output':[
                                     'to':[
                                             'kind':build.spec.output.to.kind,
                                             'name':build.spec.output.to.name
                                     ]
-                            ]
+                            ],
+                            'status':['phase':build.status.phase]
                     ]
 
+                    if (isBuildSuccesful(build)){
+                        buildOutput["${build.spec.output.to.kind}/${build.spec.output.to.name}"]=[
+                                'imageDigest':build.status.output.to.imageDigest,
+                                'outputDockerImageReference':build.status.outputDockerImageReference
+                        ]
+                    }
                 }
                 __context['build']=buildOutput
                 script.echo "${buildOutput}"
