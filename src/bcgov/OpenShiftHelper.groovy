@@ -342,7 +342,7 @@ class OpenShiftHelper {
     }
 
     private def isBuildComplete(build) {
-        return ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase) || "Failed".equalsIgnoreCase(build.status.phase))
+        return ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase) || "Failed".equalsIgnoreCase(build.status.phase) || "Error".equalsIgnoreCase(build.status.phase))
     }
 
     private def isBuildSuccesful(build) {
