@@ -143,17 +143,17 @@ class OpenShiftHelper {
                 applyBuildConfig(script, openshift, __context.name, __context.buildEnvName, newObjects, currentObjects);
                 script.echo "Waiting for builds to complete"
                 waitForBuildsToComplete(script, openshift, labels)
-                context['build'] = [:]
+                __context['build'] = [:]
                 for (Map bc:openshift.selector('bc', labels).objects()){
                     String buildName="Build/${bc.metadata.name}-${bc.status.lastVersion}"
                     Map build=openshift.selector(buildName).object()
 
-                    context['build']["${build.spec.output.to.kind}/${build.spec.output.to.name}"]=[
+                    __context['build']["${build.spec.output.to.kind}/${build.spec.output.to.name}"]=[
                             'imageDigest':build.status.output.to.imageDigest,
                             'outputDockerImageReference':build.status.outputDockerImageReference
                     ]
 
-                    context['build'][buildName]=[
+                    __context['build'][buildName]=[
                             'output':[
                                     'to':[
                                             'kind':build.spec.output.to.kind,
@@ -163,7 +163,7 @@ class OpenShiftHelper {
                     ]
 
                 }
-                echo "${context['build']}"
+                echo "${__context['build']}"
                 script.error('Stop here!')
 
                 /*
