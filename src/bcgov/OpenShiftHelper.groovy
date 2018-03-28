@@ -136,6 +136,7 @@ class OpenShiftHelper {
                         m.metadata.annotations['spec.source.git.ref']=commitId
                         m.spec.source.git.ref=commitId
                         m.spec.runPolicy = 'SerialLatestOnly'
+                        script.echo "${key(m)} - commitId: ${m.spec.source.git.ref}"
                     }
                 }
 
