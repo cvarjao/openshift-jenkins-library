@@ -39,7 +39,7 @@ class OpenShiftHelper {
             for (def template : templates) {
                 def params = processStringTemplate(template, context)
                 for (Map model in openshift.process(params.remove(0), params)){
-                    models["${model.kind}/${model.metadata.name}"] = model
+                    models[key(model)] = model
                 }
             }
         }
@@ -52,7 +52,7 @@ class OpenShiftHelper {
 
         if (selector.count()>0) {
             for (Map model : selector.objects(exportable: true)) {
-                models["${model.kind}/${model.metadata.name}"] = model
+                models[key(model)] = model
             }
         }
         return models
@@ -64,10 +64,27 @@ class OpenShiftHelper {
 
         if (selector.count()>0) {
             for (Map model : selector.objects(exportable: true)) {
-                models["${model.kind}/${model.metadata.name}"] = model
+                models[key(model)] = model
             }
         }
         return models
+    }
+
+    @NonCPS
+    private String key(Map model){
+        return "${model.kind}/${model.metadata.name}"
+    }
+
+    private void waitForBuildsToComplete(OpenShiftDSL openshift, Map labels){
+        openshift.selector('builds', labels).watch {
+            boolean allDone=true
+            it.withEach { item ->
+                if(!isBuildComplete(item.object())){
+                    allDone=false
+                }
+            }
+            return allDone
+        }
     }
 
     def build(CpsScript script, Map __context) {
@@ -77,9 +94,9 @@ class OpenShiftHelper {
         openshift.withCluster() {
             openshift.withProject(openshift.project()) {
                 //def metadata = __context.metadata
-
+                Map labels=['app-name': __context.name, 'env-name': __context.buildEnvName]
                 def newObjects = loadObjectsFromTemplate(openshift, __context.bcModels, __context)
-                def currentObjects = loadObjectsByLabel(openshift, ['app-name': __context.name, 'env-name': __context.buildEnvName])
+                def currentObjects = loadObjectsByLabel(openshift, labels)
 
                 for (Map m : newObjects.values()){
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
@@ -104,7 +121,12 @@ class OpenShiftHelper {
                         m.spec.source.git.ref=commitId
                     }
                 }
-                error('Stop here!')
+
+                applyBuildConfig(script, openshift, __context.appName, __context.buildEnvName, newObjects, currentObjects);
+                script.echo "Waiting for builds to complete"
+                waitForBuildsToComplete(openshift, labels)
+                script.error('Stop here!')
+
                 /*
                 //script.echo 'Processing template ...'
                 for (m in models) {
@@ -216,30 +238,25 @@ class OpenShiftHelper {
         }
     }
 
-    private def applyBuildConfig(CpsScript script, OpenShiftDSL openshift, appName, envName, models) {
-        //def body = {
-        if (logLevel >= 4 ) script.echo "OpenShiftHelper.applyBuildConfig: Hello - ${script.dump()}"
-        if (logLevel >= 4 ) script.echo "openShiftBuild:openshift2:${openshift.dump()}"
-        //} //end 'body 'closure
-
-        def bcSelector = ['app-name': appName, 'env-name': envName];
+    private def applyBuildConfig(CpsScript script, OpenShiftDSL openshift, String appName, String envName, Map models, Map currentModels) {
+        def bcSelector = ['app-name': appName, 'env-name': envName]
 
         if (logLevel >= 4 ) script.echo "openShiftApplyBuildConfig:openshift1:${openshift.dump()}"
-
+        /*
         script.echo "Cancelling all pending builds"
         if (openshift.selector('bc', bcSelector).count() >0 ){
             openshift.selector('bc', bcSelector).cancelBuild();
         }
         script.echo "Waiting for all pending builds to complete or cancel"
-        
-        waitForBuildsWithSelector(script, openshift, openshift.selector('builds', bcSelector));
+        */
+        //waitForBuildsWithSelector(script, openshift, openshift.selector('builds', bcSelector));
 
 
         script.echo "Processing ${models.size()} objects for '${appName}' for '${envName}'"
         def creations=[]
         def updates=[]
 
-        for (Object o in models) {
+        for (Object o : models.values()) {
             if (logLevel >= 4 ) script.echo "Processing '${o.kind}/${o.metadata.name}' (before apply)"
             if (o.metadata.labels==null) o.metadata.labels =[:]
             o.metadata.labels["app"] = "${appName}-${envName}"
@@ -253,7 +270,7 @@ class OpenShiftHelper {
             }else{
                 if (!'ImageStream'.equalsIgnoreCase("${o.kind}")){
                     //script.echo "Updating '${o.kind}/${o.metadata.name}'"
-                    updates.add(o);
+                    updates.add(o)
                 }else{
                     //script.echo "Skipping '${o.kind}/${o.metadata.name}' (Already Exists)"
                     def newObject=o
@@ -334,32 +351,6 @@ class OpenShiftHelper {
                     return isBuildComplete(it.object())
                 }
             }
-            /*
-            openshift.selector(selector.names()).withEach { build ->
-                script.echo "Checking status of '${build.name()}'"
-                if (!isBuildComplete(build.object())){
-                    build.watch {
-                        return isBuildComplete(it.object())
-                    }
-                }
-            }
-            */
-
-            /*
-            def queue = []
-            queue.addAll(selector.names())
-
-            while (queue.count()>0){
-                def item=queue[0]
-                script.echo "Checking status of '${item}'"
-                if (!isBuildComplete(openshift.selector(item).object())){
-                    openshift.selector(item).watch {
-                        return isBuildComplete(it.object())
-                    }
-                }
-                queue.remove(0)
-            }
-            */
         }
     } // end method
 
