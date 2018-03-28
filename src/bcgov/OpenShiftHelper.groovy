@@ -76,34 +76,19 @@ class OpenShiftHelper {
     }
 
     private void waitForBuildsToComplete(CpsScript script, OpenShiftDSL openshift, Map labels){
-        List pending=['']
-
-        openshift.verbose(true)
+        //openshift.verbose(true)
         script.echo "Waiting for builds with labels ${labels}"
-        while(pending.size()>0) {
-            pending.clear()
-            for (Object model : openshift.selector('builds', labels).objects()) {
-                if (!isBuildComplete(model)) {
-                    pending.add(key(model))
+        openshift.selector('builds', labels).watch {
+            boolean allDone = true
+            it.withEach { item ->
+                if (!isBuildComplete(item.object())) {
+                    allDone = false
                 }
             }
-
-            if (pending.size() > 0) {
-                openshift.selector(pending).watch {
-                    boolean allDone = true
-                    it.withEach { item ->
-                        if (!isBuildComplete(item.object())) {
-                            allDone = false
-                        }
-                    }
-                    return allDone
-                }
-                script.wait 5
-                pending.clear()
-                pending.add('')
-            }
+            return allDone
         }
-        openshift.verbose(false)
+
+        //openshift.verbose(false)
     }
 
     def build(CpsScript script, Map __context) {
