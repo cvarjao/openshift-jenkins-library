@@ -15,7 +15,7 @@ def listModules(workspaceDir) {
 
 def call(metadata) {
     //metadata.modules=listModules(pwd())
-    //metadata.commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+    metadata.commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
     metadata.isPullRequest=(env.CHANGE_ID != null && env.CHANGE_ID.trim().length()>0)
     metadata.gitRepoUrl = scm.getUserRemoteConfigs()[0].getUrl()
 
