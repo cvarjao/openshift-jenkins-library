@@ -204,7 +204,7 @@ class OpenShiftHelper {
                     waitForBuildsToComplete(script, openshift, labels)
                 }
 
-                __context['build']=loadBuildConfigStatus(openshift, labels)
+                def buildOutput=loadBuildConfigStatus(openshift, labels)
                 script.echo "${buildOutput}"
                 script.error('Stop here!')
 
