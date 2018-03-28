@@ -189,7 +189,7 @@ class OpenShiftHelper {
 
                 def postBuildConfigState=loadBuildConfigStatus(openshift, labels)
                 for (Map item: initialBuildConfigState.values()){
-                    script.echo "${item}"
+                    //script.echo "${item}"
                     if ('BuildConfig'.equalsIgnoreCase(item.kind)){
                         Map newItem=postBuildConfigState[key(item)]
                         Map build=initialBuildConfigState["Build/${item.metadata.name}-${item.status.lastVersion}"]
