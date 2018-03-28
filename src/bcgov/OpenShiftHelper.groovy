@@ -78,12 +78,12 @@ class OpenShiftHelper {
             openshift.withProject(openshift.project()) {
                 //def metadata = __context.metadata
 
-                def newObjects = loadObjectsFromTemplate(openshift, __context.models, __context)
+                def newObjects = loadObjectsFromTemplate(openshift, __context.bcModels, __context)
                 def currentObjects = loadObjectsByLabel(openshift, ['app-name': name, 'env-name': metadata.buildEnvName])
 
                 for (Map m : newObjects.values()){
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
-                        String commitId = metadata.commit
+                        String commitId = __context.commitId
                         String contextDir=null
 
                         if (m.spec && m.spec.source && m.spec.source.contextDir){
