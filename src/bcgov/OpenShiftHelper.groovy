@@ -75,22 +75,30 @@ class OpenShiftHelper {
         return "${model.kind}/${model.metadata.name}"
     }
 
-    private void waitForBuildsToComplete(OpenShiftDSL openshift, Map labels){
-        List pending=[]
-        for( Object model : openshift.selector('builds', labels).objects()){
-            if(!isBuildComplete(model)){
-                pending.add(key(model))
-            }
-        }
-        if (pending.size()>0) {
-            openshift.selector(pending).watch {
-                boolean allDone = true
-                it.withEach { item ->
-                    if (!isBuildComplete(item.object())) {
-                        allDone = false
-                    }
+    private void waitForBuildsToComplete(CpsScript script, OpenShiftDSL openshift, Map labels){
+        List pending=['']
+
+        while(pending.size()>0) {
+            pending.clear()
+            for (Object model : openshift.selector('builds', labels).objects()) {
+                if (!isBuildComplete(model)) {
+                    pending.add(key(model))
                 }
-                return allDone
+            }
+
+            if (pending.size() > 0) {
+                openshift.selector(pending).watch {
+                    boolean allDone = true
+                    it.withEach { item ->
+                        if (!isBuildComplete(item.object())) {
+                            allDone = false
+                        }
+                    }
+                    return allDone
+                }
+                script.wait 5
+                pending.clear()
+                pending.add('')
             }
         }
     }
@@ -127,12 +135,13 @@ class OpenShiftHelper {
 
                         m.metadata.annotations['spec.source.git.ref']=commitId
                         m.spec.source.git.ref=commitId
+                        m.spec.runPolicy = 'SerialLatestOnly'
                     }
                 }
 
                 applyBuildConfig(script, openshift, __context.name, __context.buildEnvName, newObjects, currentObjects);
                 script.echo "Waiting for builds to complete"
-                waitForBuildsToComplete(openshift, labels)
+                waitForBuildsToComplete(script, openshift, labels)
                 script.error('Stop here!')
 
                 /*
