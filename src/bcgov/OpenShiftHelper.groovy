@@ -76,14 +76,22 @@ class OpenShiftHelper {
     }
 
     private void waitForBuildsToComplete(OpenShiftDSL openshift, Map labels){
-        openshift.selector('builds', labels).watch {
-            boolean allDone=true
-            it.withEach { item ->
-                if(!isBuildComplete(item.object())){
-                    allDone=false
-                }
+        List pending=[]
+        for( Object model : openshift.selector('builds', labels).objects()){
+            if(!isBuildComplete(model)){
+                pending.add(key(model))
             }
-            return allDone
+        }
+        if (pending.size()>0) {
+            openshift.selector(pending).watch {
+                boolean allDone = true
+                it.withEach { item ->
+                    if (!isBuildComplete(item.object())) {
+                        allDone = false
+                    }
+                }
+                return allDone
+            }
         }
     }
 
