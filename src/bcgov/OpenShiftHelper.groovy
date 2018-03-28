@@ -78,6 +78,8 @@ class OpenShiftHelper {
     private void waitForBuildsToComplete(CpsScript script, OpenShiftDSL openshift, Map labels){
         List pending=['']
 
+        openshift.verbose(true)
+        script.echo "Waiting for builds with labels ${labels}"
         while(pending.size()>0) {
             pending.clear()
             for (Object model : openshift.selector('builds', labels).objects()) {
@@ -101,6 +103,7 @@ class OpenShiftHelper {
                 pending.add('')
             }
         }
+        openshift.verbose(false)
     }
 
     def build(CpsScript script, Map __context) {
