@@ -78,18 +78,28 @@ class OpenShiftHelper {
     private void waitForBuildsToComplete(CpsScript script, OpenShiftDSL openshift, Map labels){
         //openshift.verbose(true)
         script.echo "Waiting for builds with labels ${labels}"
-        openshift.selector('builds', labels).watch {
-            boolean allDone = true
-            it.withEach { item ->
-                def object=item.object()
-                script.echo "${key(object)} - ${object.status.phase}"
+        boolean doCheck=true
+        while(doCheck) {
+            openshift.selector('builds', labels).watch {
+                boolean allDone = true
+                it.withEach { item ->
+                    def object = item.object()
+                    script.echo "${key(object)} - ${object.status.phase}"
+                    if (!isBuildComplete(object)) {
+                        allDone = false
+                    }
+                }
+                return allDone
+            }
+            script.sleep 5
+            doCheck=false
+            for (Map dc:openshift.selector('builds', labels).objects()){
                 if (!isBuildComplete(object)) {
-                    allDone = false
+                    doCheck=true
+                    break
                 }
             }
-            return allDone
         }
-
         //openshift.verbose(false)
     }
 
