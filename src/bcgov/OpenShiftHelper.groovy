@@ -33,34 +33,79 @@ class OpenShiftHelper {
         return null
     }
 
+    private Map loadObjectsFromTemplate(OpenShiftDSL openshift, List templates, Map context){
+        def models = [:]
+        if (templates !=null && templates.size() > 0) {
+            for (def template : templates) {
+                def params = processStringTemplate(template, context)
+                for (Map model in openshift.process(params.remove(0), params)){
+                    models["${model.kind}/${model.metadata.name}"] = model
+                }
+            }
+        }
+        return nodels
+    }
+
+    private Map loadObjectsByLabel(OpenShiftDSL openshift, Map labels){
+        def models = [:]
+        def selector=openshift.selector('is,bc,secret,configmap,dc,svc,route', labels)
+
+        if (selector.count()>0) {
+            for (Map model : selector.objects(exportable: true)) {
+                models["${model.kind}/${model.metadata.name}"] = model
+            }
+        }
+        return models
+    }
+
+    private Map loadObjectsByName(OpenShiftDSL openshift, List names){
+        def models = [:]
+        def selector = openshift.selector(names)
+
+        if (selector.count()>0) {
+            for (Map model : selector.objects(exportable: true)) {
+                models["${model.kind}/${model.metadata.name}"] = model
+            }
+        }
+        return models
+    }
+
     def build(CpsScript script, Map __context) {
         OpenShiftDSL openshift=script.openshift;
 
-        //File bcScriptFactoryFile=new File(script.pwd(), 'openshift.bc.groovy');
-        //script.echo "bcScriptFactoryFile:${bcScriptFactoryFile.getText()}"
 
-
-        if (logLevel >= 4 ) script.echo "openShiftBuild:openshift1:${openshift.dump()}"
         openshift.withCluster() {
-            if (logLevel >= 4 ) script.echo "openShiftBuild:openshift2:${openshift.dump()}"
             openshift.withProject(openshift.project()) {
-                def models = [];
-                def metadata = __context.metadata;
+                def metadata = __context.metadata
 
-                if (logLevel >= 4 ) script.echo "openShiftBuild:openshift3:${openshift.dump()}"
-                if (logLevel >= 1 ) script.echo "openShiftBuild: project:${openshift.project()}"
+                def newObjects = loadObjectsFromTemplate(openshift, __context.models, context)
+                def currentObjects = loadObjectsByLabel(openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName])
 
-                if (logLevel >= 4 ) script.echo "metadata:\n${metadata}"
+                for (Map m : newObjects.values()){
+                    if ('BuildConfig'.equalsIgnoreCase(m.kind)){
+                        String commitId = metadata.commit
+                        String contextDir=null
 
-                if (__context.models != null) {
-                    def modelsDef = __context.models
-                    def bindings = __context
-                    for (def template:modelsDef){
-                        def params=processStringTemplate(template, bindings);
-                        models.addAll(openshift.process(params.remove(0), params))
+                        if (m.spec && m.spec.source && m.spec.source.contextDir){
+                            contextDir=m.spec.source.contextDir
+                        }
+
+                        if (contextDir!=null && contextDir.startsWith('/') && !contextDir.equalsIgnoreCase('/')){
+                            contextDir=contextDir.substring(1)
+                        }
+
+                        if (contextDir!=null){
+                            commitId=script.sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${contextDir}'").trim()
+                        }
+                        if (!m.metadata.annotations) m.metadata.annotations=[:]
+                        if (m.spec.source.git.ref) m.metadata.annotations['source/spec.source.git.ref']=m.spec.source.git.ref
+
+                        m.metadata.annotations['spec.source.git.ref']=commitId
+                        m.spec.source.git.ref=commitId
                     }
                 }
-
+                error('Stop here!')
+                /*
                 //script.echo 'Processing template ...'
                 for (m in models) {
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
@@ -82,21 +127,7 @@ class OpenShiftHelper {
                         if (m.spec.source.git.ref) m.metadata.annotations['source/spec.source.git.ref']=m.spec.source.git.ref
 
                         m.metadata.annotations['spec.source.git.ref']=commitId
-                        //Disable ConfigChange trigger
-                        /*
-                        if (m.spec.triggers){
-                            def newTriggers=[]
-                            m.metadata.annotations['source/spec.triggers'] = toJsonString(m.spec.triggers)
-                            for(def trigger:m.spec.triggers){
-                                if (!'ConfigChange'.equalsIgnoreCase(trigger.type)){
-                                    newTriggers.add(trigger)
-                                }
-                            }
-                            m.spec.triggers=newTriggers
-                        }
-                        */
                         m.spec.source.git.ref=commitId
-                        //script.echo "Setting commit '${m.spec.source.git.ref}' for 'bc/${m.metadata.name}'"
                     }
                 }
 
@@ -117,23 +148,6 @@ class OpenShiftHelper {
                         def startNewBuild=true
 
 
-                        /*
-                        def hasConfigChangeTrigger=false
-                        if (m.spec.triggers){
-                            for (def trigger:m.spec.triggers){
-                                if ('ConfigChange'.equalsIgnoreCase(trigger.type)){
-                                    hasConfigChangeTrigger=true
-                                }
-                            }
-                        }
-                        if (hasConfigChangeTrigger) {
-                            openshift.set(['triggers', "bc/${m.metadata.name}", '--from-config', '--remove'])
-                        }
-                        openshift.selector("bc/${m.metadata.name}").patch('\'{"spec":{"source":{"git":{"ref": "'+commitId+'"}}}}\'')
-                        if (hasConfigChangeTrigger) {
-                            openshift.set(['triggers', "bc/${m.metadata.name}", '--from-config'])
-                        }
-                        */
                         def sourceBuildConfig=getImageChangeTriggerBuildConfig(m, models)
                         if (sourceBuildConfig!=null && sourceBuildConfig.status.newBuild){
                             _deferredBuilds.add(openshift.selector("bc/${m.metadata.name}").object())
@@ -197,6 +211,7 @@ class OpenShiftHelper {
                         }
                     }
                 }
+                */
             }
         }
     }
@@ -473,6 +488,8 @@ class OpenShiftHelper {
     private def applyDeploymentConfig(CpsScript script, OpenShiftDSL openshift, String buildProjectName, String appName, String envName, List models, buildImageStreams) {
         def dcSelector=['app-name':appName, 'env-name':envName];
         def replicas=[:]
+        def upserts=[]
+
         for ( m in models ) {
             if ("DeploymentConfig".equals(m.kind)){
                 replicas[m.metadata.name]=m.spec.replicas
@@ -480,6 +497,8 @@ class OpenShiftHelper {
                 m.spec.paused = true
                 updateContainerImages(script, openshift, m.spec.template.spec.containers, m.spec.triggers);
             }
+
+            upserts.add(m)
         }
 
         //echo "Scaling down"
@@ -501,13 +520,11 @@ class OpenShiftHelper {
 
         script.echo "The template will create/update ${models.size()} objects"
         //TODO: needs to review usage of 'apply', it recreates Secrets!!!
-        def secrets=models.findAll()
-        def configSets=models.findAll()
-        def others=models.findAll()
 
-        def selector=openshift.apply(others)
+        if (upserts.size()>0){
+            openshift.apply(upserts).label(['app':"${appName}-${envName}", 'app-name':"${appName}", 'env-name':"${envName}"], "--overwrite")
+        }
 
-        selector.label(['app':"${appName}-${envName}", 'app-name':"${appName}", 'env-name':"${envName}"], "--overwrite")
 
         openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
             def o = dc.object()
