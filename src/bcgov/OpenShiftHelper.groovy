@@ -287,6 +287,7 @@ class OpenShiftHelper {
         script.echo "Processing ${models.size()} objects for '${appName}' for '${envName}'"
         def creations=[]
         def updates=[]
+        def patches=[]
 
         for (Object o : models.values()) {
             if (logLevel >= 4 ) script.echo "Processing '${o.kind}/${o.metadata.name}' (before apply)"
@@ -301,8 +302,9 @@ class OpenShiftHelper {
                 creations.add(o)
             }else{
                 if (!'ImageStream'.equalsIgnoreCase("${o.kind}")){
-                    //script.echo "Updating '${o.kind}/${o.metadata.name}'"
-                    updates.add(o)
+                    script.echo "Skipping '${key(o)}'"
+                    //updates.add(o)
+                    patches.add(o)
                 }else{
                     //script.echo "Skipping '${o.kind}/${o.metadata.name}' (Already Exists)"
                     def newObject=o
