@@ -130,7 +130,7 @@ class OpenShiftHelper {
                     }
                 }
 
-                applyBuildConfig(script, openshift, __context.appName, __context.buildEnvName, newObjects, currentObjects);
+                applyBuildConfig(script, openshift, __context.name, __context.buildEnvName, newObjects, currentObjects);
                 script.echo "Waiting for builds to complete"
                 waitForBuildsToComplete(openshift, labels)
                 script.error('Stop here!')
