@@ -76,10 +76,10 @@ class OpenShiftHelper {
 
         openshift.withCluster() {
             openshift.withProject(openshift.project()) {
-                def metadata = __context.metadata
+                //def metadata = __context.metadata
 
-                def newObjects = loadObjectsFromTemplate(openshift, __context.models, context)
-                def currentObjects = loadObjectsByLabel(openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName])
+                def newObjects = loadObjectsFromTemplate(openshift, __context.models, __context)
+                def currentObjects = loadObjectsByLabel(openshift, ['app-name': name, 'env-name': metadata.buildEnvName])
 
                 for (Map m : newObjects.values()){
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){

@@ -37,7 +37,7 @@ def call(body) {
             //GitHubHelper.getPullRequest(this).comment("Build in progress")
             new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
 
-            loadBuildMetadata(metadata)
+            loadBuildMetadata(context)
             //echo "metadata:\n${metadata}"
             def stashIncludes=[]
             for ( def templateCfg : context.bcModels + context.dcModels){
@@ -48,10 +48,7 @@ def call(body) {
             stash(name: 'openshift', includes:stashIncludes.join(','))
             echo 'Building ...'
             unstash(name: 'openshift')
-            new OpenShiftHelper().build(this,[
-                    'metadata': metadata,
-                    'models': context.bcModels
-            ])
+            new OpenShiftHelper().build(this, context)
 
             //GitHubHelper.getPullRequest(this).comment("Build complete")
         }
