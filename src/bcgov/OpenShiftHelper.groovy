@@ -81,7 +81,9 @@ class OpenShiftHelper {
         openshift.selector('builds', labels).watch {
             boolean allDone = true
             it.withEach { item ->
-                if (!isBuildComplete(item.object())) {
+                def object=item.object()
+                script.echo "${key(object)} - ${object.status.phase}"
+                if (!isBuildComplete(object)) {
                     allDone = false
                 }
             }
