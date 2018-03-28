@@ -70,6 +70,45 @@ class OpenShiftHelper {
         return models
     }
 
+    private Map loadBuildConfigStatus(OpenShiftDSL openshift, Map labels){
+        Map buildOutput = [:]
+        def selector=openshift.selector('bc', labels)
+
+        if (selector.count()>0) {
+            for (Map bc : selector.objects()) {
+                String buildName = "Build/${bc.metadata.name}-${bc.status.lastVersion}"
+                Map build = openshift.selector(buildName).object()
+                buildOutput[buildName] = [
+                        'kind': build.kind,
+                        'metadata': ['name':build.metadata.name],
+                        'output': [
+                                'to': [
+                                        'kind': build.spec.output.to.kind,
+                                        'name': build.spec.output.to.name
+                                ]
+                        ],
+                        'status': ['phase': build.status.phase]
+                ]
+
+                if (isBuildSuccesful(build)) {
+                    buildOutput["${build.spec.output.to.kind}/${build.spec.output.to.name}"] = [
+                            'kind': build.spec.output.to.kind,
+                            'metadata': ['name':build.spec.output.to.name],
+                            'imageDigest'               : build.status.output.to.imageDigest,
+                            'outputDockerImageReference': build.status.outputDockerImageReference
+                    ]
+                }
+
+                buildOutput["${key(bc)}"] = [
+                        'kind': bc.kind,
+                        'metadata': ['name':bc.metadata.name],
+                        'status': ['lastVersion':bc.status.lastVersion, 'lastBuildName':buildName]
+                ]
+            }
+        }
+        return buildOutput
+    }
+
     @NonCPS
     private String key(Map model){
         return "${model.kind}/${model.metadata.name}"
@@ -140,31 +179,30 @@ class OpenShiftHelper {
                     }
                 }
 
+                def initialBuildConfigState=loadBuildConfigStatus(openshift, labels)
+
                 applyBuildConfig(script, openshift, __context.name, __context.buildEnvName, newObjects, currentObjects);
                 script.echo "Waiting for builds to complete"
-                waitForBuildsToComplete(script, openshift, labels)
-                Map buildOutput = [:]
-                for (Map bc:openshift.selector('bc', labels).objects()){
-                    String buildName="Build/${bc.metadata.name}-${bc.status.lastVersion}"
-                    Map build=openshift.selector(buildName).object()
-                    buildOutput[buildName]=[
-                            'output':[
-                                    'to':[
-                                            'kind':build.spec.output.to.kind,
-                                            'name':build.spec.output.to.name
-                                    ]
-                            ],
-                            'status':['phase':build.status.phase]
-                    ]
 
-                    if (isBuildSuccesful(build)){
-                        buildOutput["${build.spec.output.to.kind}/${build.spec.output.to.name}"]=[
-                                'imageDigest':build.status.output.to.imageDigest,
-                                'outputDockerImageReference':build.status.outputDockerImageReference
-                        ]
+                waitForBuildsToComplete(script, openshift, labels)
+                def startedNewBuilds=false
+
+                def postBuildConfigState=loadBuildConfigStatus(openshift, labels)
+                for (Map item: initialBuildConfigState){
+                    if ('BuildConfig'.equalsIgnoreCase(item.kind)){
+                        Map newItem=postBuildConfigState[key(item)]
+                        if (item.status.lastVersion == newItem.status.lastVersion && !isBuildSuccesful(item)){
+                            openshift.selector(key(item)).startBuild()
+                            startedNewBuilds=true
+                        }
                     }
                 }
-                __context['build']=buildOutput
+
+                if (startedNewBuilds) {
+                    waitForBuildsToComplete(script, openshift, labels)
+                }
+
+                __context['build']=loadBuildConfigStatus(openshift, labels)
                 script.echo "${buildOutput}"
                 script.error('Stop here!')
 
