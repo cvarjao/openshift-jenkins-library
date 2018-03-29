@@ -546,7 +546,7 @@ class OpenShiftHelper {
                 String rcName = "ReplicationController/${dc.metadata.name}-${dc.status.latestVersion}"
                 def rcSelector = openshift.selector(rcName)
                 if (rcSelector.count()>0) {
-                    Map rc = selector.object()
+                    Map rc = rcSelector.object()
                     buildOutput[rcName] = [
                             'kind'    : rc.kind,
                             'metadata': ['name': rc.metadata.name],
