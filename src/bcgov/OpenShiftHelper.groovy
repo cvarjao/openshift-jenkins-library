@@ -520,7 +520,7 @@ class OpenShiftHelper {
                 buildOutput["${key(dc)}"] = [
                         'kind'    : dc.kind,
                         'metadata': ['name': dc.metadata.name],
-                        'status'  : ['latestVersion': dc.status.latestVersion, 'latestReplicationControllerName': rcName]
+                        'status'  : ['latestVersion': dc.status.latestVersion, 'latestReplicationControllerName': rcName],
                         'spec':[
                                 'template':[
                                         'spec':[
