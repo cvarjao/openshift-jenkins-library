@@ -115,9 +115,15 @@ class OpenShiftHelper {
     }
     private void waitForDeploymentsToComplete(CpsScript script, OpenShiftDSL openshift, Map labels){
         script.echo "Waiting for deployments with labels ${labels}"
+
+        Map rcLabels=[:]
+        for(String dcName:penshift.selector('dc', labels).names()){
+            rcLabels['openshift.io/deployment-config.name']= dcName
+        }
+
         boolean doCheck=true
         while(doCheck) {
-            openshift.selector('rc', labels).watch {
+            openshift.selector('rc', rcLabels).watch {
                 boolean allDone = true
                 it.withEach { item ->
                     def object = item.object()
@@ -128,9 +134,10 @@ class OpenShiftHelper {
                 }
                 return allDone
             }
+
             script.sleep 5
             doCheck=false
-            for (Map build:openshift.selector('rc', labels).objects()){
+            for (Map build:openshift.selector('rc', rcLabels).objects()){
                 if (!isReplicationControllerComplete(build)) {
                     doCheck=true
                     break
@@ -144,8 +151,8 @@ class OpenShiftHelper {
                 boolean allDone = true
                 it.withEach { item ->
                     def dc = item.object()
-                    script.echo "${key(dc)} - desired:${dc.status.replicas}  ready:${dc.status.readyReplicas} available:${dc.status.availableReplicas}"
-                    if (!(dc.status.replicas == dc.status.readyReplicas &&  dc.status.replicas == dc.status.availableReplicas)) {
+                    script.echo "${key(dc)} - desired:${dc?.status?.replicas}  ready:${dc?.status?.readyReplicas} available:${dc?.status?.availableReplicas}"
+                    if (!(dc?.status?.replicas == dc?.status?.readyReplicas &&  dc?.status?.replicas == dc?.status?.availableReplicas)) {
                         allDone = false
                     }
                 }
@@ -154,7 +161,7 @@ class OpenShiftHelper {
             script.sleep 5
             doCheck=false
             for (Map dc : openshift.selector('dc', labels).objects()){
-                if (!(dc.status.replicas == dc.status.readyReplicas &&  dc.status.replicas == dc.status.availableReplicas)) {
+                if (!(dc?.status?.replicas == dc?.status?.readyReplicas &&  dc?.status?.replicas == dc?.status?.availableReplicas)) {
                     doCheck=true
                     break
                 }
@@ -410,13 +417,11 @@ class OpenShiftHelper {
         //dcModels
         OpenShiftDSL openshift=script.openshift
         Map deployCfg = context.deploy
-        Map buildCfg = context.build
-        Map metadata = context.metadata
 
         if (!deployCfg.dcPrefix) deployCfg.dcPrefix=context.name
         if (!deployCfg.dcSuffix) deployCfg.dcSuffix="-${deployCfg.envName}"
 
-        script.echo "Deploying '${context.name}' to '${context.build.envName}'"
+        script.echo "Deploying '${context.name}' to '${context.deploy.envName}'"
         openshift.withCluster() {
             def buildProjectName="${openshift.project()}"
             def buildImageStreams=[:]
