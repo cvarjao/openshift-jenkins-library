@@ -117,8 +117,8 @@ class OpenShiftHelper {
         script.echo "Waiting for deployments with labels ${labels}"
 
         Map rcLabels=[:]
-        for(String dcName:openshift.selector('dc', labels).names()){
-            rcLabels['openshift.io/deployment-config.name']= dcName
+        openshift.selector('dc', labels).withEach { dc ->
+            rcLabels['openshift.io/deployment-config.name']= dc.metadata.name
         }
 
         boolean doCheck=true
