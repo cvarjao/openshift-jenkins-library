@@ -256,7 +256,7 @@ class OpenShiftHelper {
                     buildOutput["BaseImageStream/${baseName}"]=['ImageStream':key(iso)]
                 }
 
-                context['build'] = ['status':buildOutput, 'projectName':"${openshift.project()}"]
+                __context['build'] = ['status':buildOutput, 'projectName':"${openshift.project()}"]
 
 
             }
