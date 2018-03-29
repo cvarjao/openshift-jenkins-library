@@ -117,7 +117,7 @@ class OpenShiftHelper {
         script.echo "Waiting for deployments with labels ${labels}"
 
         Map rcLabels=[:]
-        for(String dcName:penshift.selector('dc', labels).names()){
+        for(String dcName:openshift.selector('dc', labels).names()){
             rcLabels['openshift.io/deployment-config.name']= dcName
         }
 
