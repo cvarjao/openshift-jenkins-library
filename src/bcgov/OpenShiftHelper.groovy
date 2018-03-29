@@ -94,7 +94,7 @@ class OpenShiftHelper {
                     buildOutput["${build.spec.output.to.kind}/${build.spec.output.to.name}"] = [
                             'kind': build.spec.output.to.kind,
                             'metadata': ['name':build.spec.output.to.name],
-                            'imageDigest'               : build.status.output.to.imageDigest,
+                            'imageDigest': build.status.output.to.imageDigest,
                             'outputDockerImageReference': build.status.outputDockerImageReference
                     ]
                 }
@@ -112,6 +112,31 @@ class OpenShiftHelper {
     @NonCPS
     private String key(Map model){
         return "${model.kind}/${model.metadata.name}"
+    }
+    private void waitForDeploymentsToComplete(CpsScript script, OpenShiftDSL openshift, Map labels){
+        script.echo "Waiting for deployments with labels ${labels}"
+        boolean doCheck=true
+        while(doCheck) {
+            openshift.selector('rc', labels).watch {
+                boolean allDone = true
+                it.withEach { item ->
+                    def object = item.object()
+                    script.echo "${key(object)} - ${object.status.phase}"
+                    if (!isReplicationControllerComplete(object)) {
+                        allDone = false
+                    }
+                }
+                return allDone
+            }
+            script.sleep 5
+            doCheck=false
+            for (Map build:openshift.selector('rc', labels).objects()){
+                if (!isReplicationControllerComplete(build)) {
+                    doCheck=true
+                    break
+                }
+            }
+        }
     }
 
     private void waitForBuildsToComplete(CpsScript script, OpenShiftDSL openshift, Map labels){
@@ -205,116 +230,35 @@ class OpenShiftHelper {
                 }
 
                 def buildOutput=loadBuildConfigStatus(openshift, labels)
-                script.echo "${buildOutput}"
-                script.error('Stop here!')
-
-                /*
-                //script.echo 'Processing template ...'
-                for (m in models) {
-                    if ('BuildConfig'.equalsIgnoreCase(m.kind)){
-                        String commitId = metadata.commit
-                        String contextDir=null
-
-                        if (m.spec && m.spec.source && m.spec.source.contextDir){
-                            contextDir=m.spec.source.contextDir
-                        }
-
-                        if (contextDir!=null && contextDir.startsWith('/') && !contextDir.equalsIgnoreCase('/')){
-                            contextDir=contextDir.substring(1)
-                        }
-
-                        if (contextDir!=null){
-                            commitId=script.sh(returnStdout: true, script: "git rev-list -1 HEAD -- '${contextDir}'").trim()
-                        }
-                        if (!m.metadata.annotations) m.metadata.annotations=[:]
-                        if (m.spec.source.git.ref) m.metadata.annotations['source/spec.source.git.ref']=m.spec.source.git.ref
-
-                        m.metadata.annotations['spec.source.git.ref']=commitId
-                        m.spec.source.git.ref=commitId
-                    }
-                }
-
-                applyBuildConfig(script, openshift, metadata.appName, metadata.buildEnvName, models);
-                //Wait 10 seconds for triggers to kick in
-                script.sleep 10
-
-                //script.echo 'Creating/Updating Objects (from template)'
-                def builds = []
-
-                def _deferredBuilds=[]
-
-                for (m in models) {
-                    if ('BuildConfig'.equalsIgnoreCase(m.kind)){
-                        if (logLevel >= 1 ) script.echo "Processing 'bc/${m.metadata.name}'"
-                        String commitId = m.metadata.annotations['spec.source.git.ref']
-                        if (m.status==null) m.status=[:]
-                        def startNewBuild=true
-
-
-                        def sourceBuildConfig=getImageChangeTriggerBuildConfig(m, models)
-                        if (sourceBuildConfig!=null && sourceBuildConfig.status.newBuild){
-                            _deferredBuilds.add(openshift.selector("bc/${m.metadata.name}").object())
-                            startNewBuild=false
-                        }
-
-                        if (startNewBuild==true) {
-                            def buildSelector = null
-
-                            openshift.selector('builds', ['openshift.io/build-config.name': "${m.metadata.name}", 'commit-id': "${commitId}"]).withEach{ build ->
-                                if (isBuildSuccesful(build.object())){
-                                    buildSelector=openshift.selector(build.name())
-                                }
-                            }
-
-                            if (buildSelector == null || buildSelector.count() == 0) {
-                                script.echo "Starting new build for 'bc/${m.metadata.name}' with commit ${commitId}"
-                                buildSelector = openshift.selector("bc/${m.metadata.name}").startBuild("--commit=${commitId}")
-                                script.echo "New build started - ${buildSelector.name()}"
-                                buildSelector.label(['commit-id': "${commitId}"], "--overwrite")
-                                m.status.newBuild=buildSelector.name()
-                                builds.add(buildSelector.name())
-                            } else {
-                                builds.add(buildSelector.name())
-                                script.echo "Skipping new build. Reusing '${buildSelector.name()}'"
-                            }
-                        }else{
-                            script.echo "Build for 'bc/${m.metadata.name}' has been deferred"
+                boolean allBuildSuccessful=true
+                for (Map item: buildOutput.values()){
+                    if ('BuildConfig'.equalsIgnoreCase(item.kind)){
+                        Map build=buildOutput["Build/${item.metadata.name}-${item.status.lastVersion}"]
+                        if (!isBuildSuccesful(build)){
+                            allBuildSuccessful=false
+                            break;
                         }
                     }
                 }
-
-                while(builds.size()>0) {
-                    script.echo "Waiting for builds to complete"
-                    //builds.add(startBuild(script, openshift, ['app-name': metadata.appName, 'env-name': metadata.buildEnvName], "${metadata.modules['spring-petclinic'].commit}"));
-                    waitForBuilds(script, openshift, builds)
-                    openshift.selector(builds).withEach { build ->
-                        build.label(['commit-id': "${build.object().spec.source.git.ref}"], "--overwrite")
-                    }
-                    openshift.selector(builds).withEach { build ->
-                        def bo = build.object() // build object
-                        if (!isBuildSuccesful(bo)) {
-                            script.error "Build '${build.name()}' did not successfully complete (${bo.status.phase})"
-                        }
-                    }
-                    builds.clear()
-                    script.sleep 10 //wait for triggers to kick in
-                    for (m in models) {
-                        if ('BuildConfig'.equalsIgnoreCase(m.kind)){
-                            def o=openshift.selector("bc/${m.metadata.name}").object(exportable:true)
-                            def buildName="build/${m.metadata.name}-${o.status.lastVersion}"
-                            def build=openshift.selector("build/${m.metadata.name}-${o.status.lastVersion}")
-                            if (build.count()>0){
-                                def bo=build.object(exportable:true)
-                                if (!isBuildComplete(bo)){
-                                    if (!builds.contains(buildName)){
-                                        builds.add(buildName)
-                                    }
-                                }
-                            }
-                        }
-                    }
+                if (!allBuildSuccessful){
+                    script.error('Sorry, not all builds have been successful! :`(')
                 }
-                */
+
+                openshift.selector( 'is', labels).withEach {
+                    def iso=it.object()
+
+                    buildOutput["${key(iso)}"] = [
+                            'kind': iso.kind,
+                            'metadata': ['name':iso.metadata.name, 'namespace':iso.metadata.namespace],
+                            'labels':iso.metadata.labels
+                    ]
+                    String baseName=getImageStreamBaseName(iso)
+                    buildOutput["BaseImageStream/${baseName}"]=['ImageStream':key(iso)]
+                }
+
+                context['build'] = ['status':buildOutput, 'projectName':"${openshift.project()}"]
+
+
             }
         }
     }
@@ -401,6 +345,10 @@ class OpenShiftHelper {
     private def freeze(OpenShiftDSL openshift, selector) {
         return openshift.selector(selector.names());
     }
+    private def isReplicationControllerComplete(rc) {
+        String phase=rc.metadata.annotations['openshift.io/deployment.phase']
+        return ("Complete".equalsIgnoreCase(phase) || "Cancelled".equalsIgnoreCase(phase) || "Failed".equalsIgnoreCase(phase) || "Error".equalsIgnoreCase(phase))
+    }
 
     private def isBuildComplete(build) {
         return ("Complete".equalsIgnoreCase(build.status.phase) || "Cancelled".equalsIgnoreCase(build.status.phase) || "Failed".equalsIgnoreCase(build.status.phase) || "Error".equalsIgnoreCase(build.status.phase))
@@ -432,46 +380,26 @@ class OpenShiftHelper {
     }
 
     def deploy(CpsScript script, Map context) {
+        //dcModels
         OpenShiftDSL openshift=script.openshift
+        Map deployCfg = context.deploy
+        Map buildCfg = context.build
         Map metadata = context.metadata
 
-        if (!context.dcPrefix) context.dcPrefix=metadata.appName
-        if (!context.dcSuffix) context.dcSuffix="-${context.envName}"
+        if (!deployCfg.dcPrefix) deployCfg.dcPrefix=context.name
+        if (!deployCfg.dcSuffix) deployCfg.dcSuffix="-${deployCfg.envName}"
 
-        script.echo "Deploying to '${context.envName}'"
+        script.echo "Deploying to '${context.name}'"
         openshift.withCluster() {
             def buildProjectName="${openshift.project()}"
             def buildImageStreams=[:]
 
-            if (logLevel >= 4 ) script.echo "Collecting ImageStreams";
-            openshift.selector( 'is', ['app-name':metadata.appName, 'env-name':metadata.buildEnvName]).freeze().withEach {
-                def iso=it.object()
-                String baseName=getImageStreamBaseName(iso)
-                if (logLevel >= 4 ) script.echo "Build ImageStream '${iso.metadata.name}' baseName is '${baseName}'";
-                buildImageStreams[baseName]=iso
-            }
-
             //script.echo "buildImageStreams:${buildImageStreams}"
             openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
-                openshift.withProject( context.projectName ) {
-                    def models = [];
-
-                    context.buildProject=buildProjectName
-                    context.deployProject=context.projectName
-
-                    if (context.models != null) {
-                        def modelsDef = context.models
-                        def bindings = context
-                        for (def template:modelsDef){
-                            def params=processStringTemplate(template, bindings);
-
-                            models.addAll(openshift.process(params.remove(0), params))
-                        }
-                    }
-
+                openshift.withProject( deployCfg.projectName ) {
 
                     //script.echo "DeployModels:${models}"
-                    applyDeploymentConfig(script, openshift, buildProjectName, metadata.appName, context.envName, models, buildImageStreams)
+                    applyDeploymentConfig(script, openshift, context)
 
 
                 } // end openshift.withProject()
@@ -518,8 +446,8 @@ class OpenShiftHelper {
                     for ( cn in t.imageChangeParams.containerNames){
                         if (cn.equalsIgnoreCase(c.name)){
                             if (logLevel >= 4 ) script.echo "${t.imageChangeParams.from}"
-                            def dockerImageReference = '';
-                            def selector=openshift.selector("istag/${t.imageChangeParams.from.name}");
+                            def dockerImageReference = ' '
+                            def selector=openshift.selector("istag/${t.imageChangeParams.from.name}")
 
                             if (t.imageChangeParams.from['namespace']!=null && t.imageChangeParams.from['namespace'].length()>0){
                                 openshift.withProject(t.imageChangeParams.from['namespace']) {
@@ -536,7 +464,7 @@ class OpenShiftHelper {
                             }
 
                             if (logLevel >= 4 ) script.echo "ImageReference is '${dockerImageReference}'"
-                            c.image = "${dockerImageReference}";
+                            c.image = "${dockerImageReference}"
                         }
                     }
                 }
@@ -544,142 +472,53 @@ class OpenShiftHelper {
         }
     }
 
-    private def applyDeploymentConfig(CpsScript script, OpenShiftDSL openshift, String buildProjectName, String appName, String envName, List models, buildImageStreams) {
-        def dcSelector=['app-name':appName, 'env-name':envName];
+    private def applyDeploymentConfig(CpsScript script, OpenShiftDSL openshift, Map context) {
+        Map deployCtx = context.deploy
+        def dcSelector=['app-name':context.name, 'env-name':deployCtx.envName];
         def replicas=[:]
-        def upserts=[]
 
-        for ( m in models ) {
-            if ("DeploymentConfig".equals(m.kind)){
-                replicas[m.metadata.name]=m.spec.replicas
-                m.spec.replicas = 0
-                m.spec.paused = true
-                updateContainerImages(script, openshift, m.spec.template.spec.containers, m.spec.triggers);
-            }
+        Map initDeploymemtConfigStatus=loadDeploymentConfigStatus(openshift, labels)
+        Map models = loadObjectsFromTemplate(openshift, context.dcModels, context)
 
-            upserts.add(m)
-        }
-
-        //echo "Scaling down"
-        // openshift.selector( 'dc', dcSelector).scale('--replicas=0', '--timeout=2m')
-        openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
-            def o = dc.object()
-            if (o.metadata.annotations && o.metadata.annotations['replicas'] && o.metadata.annotations['replicas'].length() != 0){
-                replicas[o.metadata.name]=o.metadata.annotations['replicas']
-            }else{
-                dc.annotate(['replicas':o.spec.replicas], "--overwrite")
-                replicas[o.metadata.name]=o.spec.replicas
-            }
-
-            if (logLevel >= 4 )  script.echo "Pausing '${dc.name()}'"
-            if ( o.spec.paused == false ){
-                dc.rollout().pause()
+        List upserts=[]
+        for (Map m : models.values()) {
+            if ('ImageStream'.equalsIgnoreCase(m.kind)){
+                upserts.add(m)
             }
         }
 
-        script.echo "The template will create/update ${models.size()} objects"
-        //TODO: needs to review usage of 'apply', it recreates Secrets!!!
-
-        if (upserts.size()>0){
-            openshift.apply(upserts).label(['app':"${appName}-${envName}", 'app-name':"${appName}", 'env-name':"${envName}"], "--overwrite")
+        openshift.apply(upserts)
+        //.label(['app':"${context['app-name']}-${context['env-name']}", 'app-name':context['app-name'], 'env-name':context['env-name']], "--overwrite")
+        for (Map m : upserts) {
+            String sourceImageStreamKey=context.build.status["BaseImageStream/${getImageStreamBaseName(m)}"]['ImageStream']
+            Map sourceImageStream = context.build.status[sourceImageStreamKey]
+            openshift.tag("${sourceImageStream.metadata.namespace}/${sourceImageStream.metadata.name}:latest", "${m.metadata.name}:${dcSelector['env-name']}")
         }
-
-
-        openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
-            def o = dc.object()
-            if (!(o.metadata.annotations && o.metadata.annotations['replicas'] && o.metadata.annotations['replicas'].length() != 0)){
-                dc.annotate(['replicas':replicas[o.metadata.name]], "--overwrite")
-            }
-        }
-
-        script.echo "Tagging images"
-        openshift.selector( 'is', dcSelector).withEach { imageStream ->
-            def o=imageStream.object()
-            def imageStreamName="${o.metadata.name}"
-            def imageStreamBaseName=getImageStreamBaseName(o)
-            def sourceImageStream=buildImageStreams[imageStreamBaseName]
-
-            if (logLevel >= 4 ) script.echo "Build ImageStream '${imageStreamName}' baseName is '${imageStreamBaseName}'";
-
-            if (sourceImageStream){
-                script.echo "Tagging '${buildProjectName}/${sourceImageStream.metadata.name}:latest' as '${o.metadata.name}:${envName}'"
-                openshift.tag("${buildProjectName}/${sourceImageStream.metadata.name}:latest", "${o.metadata.name}:${envName}")
-            }
-        }
-        script.echo 'Resuming DeploymentConfigs'
-        openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
-            def o = dc.object()
-            script.echo "Resuming '${dc.name()}'"
-            if (o.spec.paused == true){
-                dc.rollout().resume()
-            }
-            dc.rollout().cancel()
-            /*
-            if (o.status && o.status.latestVersion){
-                def rc = openshift.selector("rc/${o.metadata.name}-${o.status.latestVersion}")
-                if (rc.count() > 0) {
-                    rc.rollout().cancel()
-                }
-            }
-            */
-        }
-
-        script.echo "Waiting for RCs to get Complete or get Cancelled"
-        openshift.selector( 'dc', dcSelector).watch { dc ->
-            def allDone = true;
-            dc.withEach { dc1 ->
-                def o = dc1.object();
-                def rc = openshift.selector("rc/${o.metadata.name}-${o.status.latestVersion}")
-                if (rc.count() > 0) {
-                    def rco = rc.object()
-                    def phase = rco.metadata.annotations['openshift.io/deployment.phase']
-                    if (!('Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))) {
-                        allDone = false
-                    }
-                }
-            }
-            return allDone
-        }
-
-        script.echo "Deployments:"
-        openshift.selector( 'dc', dcSelector).freeze().rollout().latest()
-
-        script.echo "Waiting for RCs to Complete"
-        openshift.selector( 'dc', dcSelector).watch { dc ->
-            def allDone = true
-            dc.withEach { dc1 ->
-                def o = dc1.object();
-                def rc = openshift.selector("rc/${o.metadata.name}-${o.status.latestVersion}")
-                if (rc.count() > 0) {
-                    def rco = rc.object()
-                    def phase = rco.metadata.annotations['openshift.io/deployment.phase']
-                    if (!('Failed'.equalsIgnoreCase(phase) || 'Complete'.equalsIgnoreCase(phase))) {
-                        allDone = false
-                    }
-                }
-            }
-            return allDone
-        }
-
-        script.echo 'Scaling-up application'
-        openshift.selector( 'dc', dcSelector).freeze().withEach { dc ->
-            def o=dc.object();
-            script.echo "Scaling ${o.metadata.name}"
-            openshift.selector(dc.name()).scale("--replicas=${replicas[o.metadata.name]}", '--timeout=2m')
-        }
-
-        script.echo 'Waiting for pods to become ready'
-        openshift.selector( 'dc', dcSelector).watch{ dc ->
-            def objects=dc.objects()
-            for (def o: objects){
-                if (!(o.status && o.status.readyReplicas == Integer.parseInt(o.metadata.annotations['replicas']))){
-                    return false
-                }
-            }
-            return true
-        }
-        openshift.selector( 'dc', dcSelector).annotate(['replicas':''], "--overwrite")
-
+        openshift.apply(models.values()).label(['app':"${context['app-name']}-${context['env-name']}", 'app-name':context['app-name'], 'env-name':context['env-name']], "--overwrite")
     }
 
+    private Map loadDeploymentConfigStatus(OpenShiftDSL openshift, Map labels){
+        Map buildOutput = [:]
+        def selector=openshift.selector('dc', labels)
+
+        if (selector.count()>0) {
+            for (Map dc : selector.objects()) {
+                String rcName = "ReplicationController/${dc.metadata.name}-${dc.status.latestVersion}"
+                Map rc = openshift.selector(rcName).object()
+                buildOutput[rcName] = [
+                        'kind': rc.kind,
+                        'metadata': ['name':rc.metadata.name],
+                        'status': rc.status,
+                        'phase': rc.metadata.annotations['openshift.io/deployment.phase']
+                ]
+
+                buildOutput["${key(dc)}"] = [
+                        'kind': dc.kind,
+                        'metadata': ['name':dc.metadata.name],
+                        'status': ['latestVersion':dc.status.latestVersion, 'latestReplicationControllerName':rcName]
+                ]
+            }
+        }
+        return buildOutput
+    }
 } // end class

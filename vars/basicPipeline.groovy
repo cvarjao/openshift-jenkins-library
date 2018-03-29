@@ -84,15 +84,16 @@ def call(body) {
                         envName = "dev-pr-${metadata.pullRequestNumber}"
                     }
                     //long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
+                    context['deploy'] = [
+                            'envName':envName,
+                            'projectName':context.env[envKeyName].project,
+                            'envKeyName':envKeyName
+                    ]
 
                     //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
                     unstash(name: 'openshift')
-                    new OpenShiftHelper().deploy(this, [
-                            'projectName': context.env[envKeyName].project,
-                            'envName'    : envName,
-                            'metadata'   : metadata,
-                            'models'     : context.dcModels
-                    ])
+                    new OpenShiftHelper().deploy(this, context)
+                    context.remove('deploy')
                     //GitHubHelper.createDeploymentStatus(this, ghDeploymentId, GHDeploymentState.SUCCESS).create()
                     //GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
                 }
