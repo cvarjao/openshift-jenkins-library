@@ -544,18 +544,20 @@ class OpenShiftHelper {
         if (selector.count()>0) {
             for (Map dc : selector.objects()) {
                 String rcName = "ReplicationController/${dc.metadata.name}-${dc.status.latestVersion}"
-                Map rc = openshift.selector(rcName).object()
-                buildOutput[rcName] = [
-                        'kind': rc.kind,
-                        'metadata': ['name':rc.metadata.name],
-                        'status': rc.status,
-                        'phase': rc.metadata.annotations['openshift.io/deployment.phase']
-                ]
-
+                def rcSelector = openshift.selector(rcName)
+                if (rcSelector.count()>0) {
+                    Map rc = selector.object()
+                    buildOutput[rcName] = [
+                            'kind'    : rc.kind,
+                            'metadata': ['name': rc.metadata.name],
+                            'status'  : rc.status,
+                            'phase'   : rc.metadata.annotations['openshift.io/deployment.phase']
+                    ]
+                }
                 buildOutput["${key(dc)}"] = [
-                        'kind': dc.kind,
-                        'metadata': ['name':dc.metadata.name],
-                        'status': ['latestVersion':dc.status.latestVersion, 'latestReplicationControllerName':rcName]
+                        'kind'    : dc.kind,
+                        'metadata': ['name': dc.metadata.name],
+                        'status'  : ['latestVersion': dc.status.latestVersion, 'latestReplicationControllerName': rcName]
                 ]
             }
         }
