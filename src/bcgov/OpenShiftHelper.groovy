@@ -345,37 +345,6 @@ class OpenShiftHelper {
 
     }
 
-
-    private def startBuild(CpsScript script, OpenShiftDSL openshift, baseSelector, commitId) {
-        String buildNameSelector = null;
-
-        def buildSelector = openshift.selector('builds', baseSelector + ['commit-id': "${commitId}"]);
-
-        if (buildSelector.count() == 0) {
-            script.echo "Starting new build for '${baseSelector}'"
-            buildSelector = openshift.selector('bc', baseSelector).startBuild("--commit=${commitId}")
-            script.echo "New build started - ${buildSelector.name()}"
-            buildSelector.label(['commit-id': "${commitId}"], "--overwrite")
-            buildNameSelector = buildSelector.name()
-        } else {
-            buildNameSelector = buildSelector.name()
-            script.echo "Reusing '${buildNameSelector}'"
-            //def build=buildSelector.object()
-            //echo "OutputImageDigest: '${build.status.output.to.imageDigest}'"
-            //echo "outputDockerImageReference: '${build.status.outputDockerImageReference}'"
-        }
-        return buildNameSelector;
-    }
-
-
-    private def waitForBuilds(CpsScript script, OpenShiftDSL openshift, List builds) {
-        //Wait for all builds to complete
-        waitForBuildsWithSelector(script, openshift, openshift.selector(builds));
-    }
-
-    private def freeze(OpenShiftDSL openshift, selector) {
-        return openshift.selector(selector.names());
-    }
     private String getReplicationControllerStatus(rc) {
         return rc.metadata.annotations['openshift.io/deployment.phase']
     }
@@ -393,18 +362,6 @@ class OpenShiftHelper {
         return "Complete".equalsIgnoreCase(build.status.phase)
     }
 
-    private def waitForBuildsWithSelector(CpsScript script, OpenShiftDSL openshift, selector) {
-        def names=selector.names()
-        if (names.size() > 0){
-            for (String name:names){
-                if (logLevel >= 3 ) script.echo "Checking status of '${name}'"
-                openshift.selector(name).watch {
-                    return isBuildComplete(it.object())
-                }
-            }
-        }
-    } // end method
-
     @NonCPS
     private def getImageStreamBaseName(res) {
         String baseName=res.metadata.name
@@ -414,7 +371,7 @@ class OpenShiftHelper {
         return baseName
     }
 
-    def deploy(CpsScript script, Map context) {
+    void deploy(CpsScript script, Map context) {
         //dcModels
         OpenShiftDSL openshift=script.openshift
         Map deployCfg = context.deploy
@@ -440,21 +397,6 @@ class OpenShiftHelper {
         } // end openshift.withCluster()
     } // end 'deploy' method
 
-    @NonCPS
-    private def jsonClone(Object object) {
-        def jsonString = groovy.json.JsonOutput.toJson(object)
-        return new groovy.json.JsonSlurper().parseText(jsonString)
-    }
-
-    @NonCPS
-    private def toJson(String string) {
-        return new groovy.json.JsonSlurper().parseText(string)
-    }
-
-    @NonCPS
-    private def toJsonString(object) {
-        return new groovy.json.JsonBuilder(object).toPrettyString()
-    }
 
     @NonCPS
     private def processStringTemplate(String template, Map bindings) {
@@ -512,6 +454,26 @@ class OpenShiftHelper {
 
         Map initDeploymemtConfigStatus=loadDeploymentConfigStatus(openshift, labels)
         Map models = loadObjectsFromTemplate(openshift, context.dcModels, context)
+
+        if (initDeploymemtConfigStatus.size()>0){
+            for (Map dc: initDeploymemtConfigStatus.values()) {
+                if ('DeploymentConfig'.equalsIgnoreCase(dc.kind)) {
+                    Map newDc=models["${key(dc)}"]
+                    if (newDc!=null) {
+                        for (Map c : dc.spec.template.spec.containers) {
+                            String dcName = c.name
+                            for (Map newC : newDc.spec.template.spec.containers) {
+                                if (dcName.equalsIgnoreCase(newC.name)) {
+                                    newC.image = c.image
+                                    script.echo "Updating '${key(dc)}' containers['${dcName}'].image=${c.image}"
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         List upserts=[]
         for (Map m : models.values()) {
