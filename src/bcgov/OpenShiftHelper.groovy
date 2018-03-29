@@ -486,14 +486,20 @@ class OpenShiftHelper {
                 upserts.add(m)
             }
         }
-
+        script.echo "Applying ImageStream"
         openshift.apply(upserts)
         //.label(['app':"${context['app-name']}-${context['env-name']}", 'app-name':context['app-name'], 'env-name':context['env-name']], "--overwrite")
         for (Map m : upserts) {
             String sourceImageStreamKey=context.build.status["BaseImageStream/${getImageStreamBaseName(m)}"]['ImageStream']
             Map sourceImageStream = context.build.status[sourceImageStreamKey]
-            openshift.tag("${sourceImageStream.metadata.namespace}/${sourceImageStream.metadata.name}:latest", "${m.metadata.name}:${labels['env-name']}")
+            String sourceImageStreamRef="${sourceImageStream.metadata.namespace}/${sourceImageStream.metadata.name}:latest"
+            String targetImageStreamRef="${m.metadata.name}:${labels['env-name']}"
+
+            script.echo "Tagging '${sourceImageStreamRef}' as '${targetImageStreamRef}'"
+            openshift.tag(sourceImageStreamRef, targetImageStreamRef)
         }
+
+        script.echo "Applying Configurations"
         openshift.apply(models.values()).label(['app':"${context['app-name']}-${context['env-name']}", 'app-name':context['app-name'], 'env-name':context['env-name']], "--overwrite")
         waitForDeploymentsToComplete(script, openshift, labels)
     }

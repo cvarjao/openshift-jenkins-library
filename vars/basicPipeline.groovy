@@ -78,11 +78,11 @@ def call(body) {
         if ("DEV".equalsIgnoreCase(stageDeployName) || "master".equalsIgnoreCase(env.CHANGE_TARGET)){
             stage("Deploy - ${stageDeployName}") {
                 node('master') {
-                    echo "Deploying to ${stageDeployName}"
                     String envName = stageDeployName.toLowerCase()
                     if ("DEV".equalsIgnoreCase(stageDeployName)) {
-                        envName = "dev-pr-${metadata.pullRequestNumber}"
+                        envName = "dev-pr-${env.CHANGE_ID}"
                     }
+                    echo "Deploying to ${stageDeployName} as ${envName}"
                     //long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
                     context['deploy'] = [
                             'envName':envName,
