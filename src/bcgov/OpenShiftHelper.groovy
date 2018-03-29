@@ -516,10 +516,18 @@ class OpenShiftHelper {
                             'phase'   : rc.metadata.annotations['openshift.io/deployment.phase']
                     ]
                 }
+
                 buildOutput["${key(dc)}"] = [
                         'kind'    : dc.kind,
                         'metadata': ['name': dc.metadata.name],
                         'status'  : ['latestVersion': dc.status.latestVersion, 'latestReplicationControllerName': rcName]
+                        'spec':[
+                                'template':[
+                                        'spec':[
+                                                'containers':dc?.spec?.template?.spec?.containers
+                                        ]
+                                ]
+                        ]
                 ]
             }
         }
