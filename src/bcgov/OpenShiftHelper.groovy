@@ -6,33 +6,6 @@ import com.openshift.jenkins.plugins.OpenShiftDSL;
 class OpenShiftHelper {
     int logLevel=0
 
-    @NonCPS
-    private def getImageChangeTriggerBuildConfig(m, models) {
-        if (m.spec.triggers){
-            for (def trigger:m.spec.triggers){
-                if ('ImageChange'.equalsIgnoreCase(trigger.type)){
-                    if (m.spec.strategy!=null &&
-                            m.spec.strategy.sourceStrategy!=null &&
-                            m.spec.strategy.sourceStrategy.from!=null &&
-                            m.spec.strategy.sourceStrategy.from.namespace == null &&
-                            'ImageStreamTag'.equalsIgnoreCase(m.spec.strategy.sourceStrategy.from.kind)){
-                        for (def m1 in models) {
-                            if ('BuildConfig'.equalsIgnoreCase(m1.kind) &&
-                                    m1.spec.output.to!=null &&
-                                    m1.spec.output.to.namespace==null &&
-                                    'ImageStreamTag'.equalsIgnoreCase(m1.spec.output.to.kind) &&
-                                    m1.spec.output.to.name.equalsIgnoreCase(m.spec.strategy.sourceStrategy.from.name)
-                            ){
-                                return m1
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return null
-    }
-
     private Map loadObjectsFromTemplate(OpenShiftDSL openshift, List templates, Map context){
         def models = [:]
         if (templates !=null && templates.size() > 0) {
@@ -49,18 +22,6 @@ class OpenShiftHelper {
     private Map loadObjectsByLabel(OpenShiftDSL openshift, Map labels){
         def models = [:]
         def selector=openshift.selector('is,bc,secret,configmap,dc,svc,route', labels)
-
-        if (selector.count()>0) {
-            for (Map model : selector.objects(exportable: true)) {
-                models[key(model)] = model
-            }
-        }
-        return models
-    }
-
-    private Map loadObjectsByName(OpenShiftDSL openshift, List names){
-        def models = [:]
-        def selector = openshift.selector(names)
 
         if (selector.count()>0) {
             for (Map model : selector.objects(exportable: true)) {
@@ -113,6 +74,7 @@ class OpenShiftHelper {
     private String key(Map model){
         return "${model.kind}/${model.metadata.name}"
     }
+
     private void waitForDeploymentsToComplete(CpsScript script, OpenShiftDSL openshift, Map labels){
         script.echo "Waiting for deployments with labels ${labels}"
 
@@ -387,7 +349,8 @@ class OpenShiftHelper {
             //script.echo "buildImageStreams:${buildImageStreams}"
             openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
                 openshift.withProject( deployCfg.projectName ) {
-
+                    String currentUser=openshift.raw('whoami').out
+                    script.echo "Conencted to project '${openshift.project()}' with user '${currentUser}'"
                     //script.echo "DeployModels:${models}"
                     applyDeploymentConfig(script, openshift, context)
 
@@ -516,7 +479,12 @@ class OpenShiftHelper {
                             'phase'   : rc.metadata.annotations['openshift.io/deployment.phase']
                     ]
                 }
-
+                List containers=[]
+                if (dc?.spec?.template?.spec?.containers != null){
+                    for (Map c : dc.spec.template.spec.containers){
+                        containers.add(['name':c.name, 'image':c.image])
+                    }
+                }
                 buildOutput["${key(dc)}"] = [
                         'kind'    : dc.kind,
                         'metadata': ['name': dc.metadata.name],
