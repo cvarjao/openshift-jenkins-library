@@ -137,6 +137,29 @@ class OpenShiftHelper {
                 }
             }
         }
+
+        doCheck=true
+        while(doCheck) {
+            openshift.selector('dc', labels).watch {
+                boolean allDone = true
+                it.withEach { item ->
+                    def dc = item.object()
+                    script.echo "${key(dc)} - desired:${dc.status.replicas}  ready:${dc.status.readyReplicas} available:${dc.status.availableReplicas}"
+                    if (!(dc.status.replicas == dc.status.readyReplicas &&  dc.status.replicas == dc.status.availableReplicas)) {
+                        allDone = false
+                    }
+                }
+                return allDone
+            }
+            script.sleep 5
+            doCheck=false
+            for (Map dc : openshift.selector('dc', labels).objects()){
+                if (!(dc.status.replicas == dc.status.readyReplicas &&  dc.status.replicas == dc.status.availableReplicas)) {
+                    doCheck=true
+                    break
+                }
+            }
+        }
     }
 
     private void waitForBuildsToComplete(CpsScript script, OpenShiftDSL openshift, Map labels){
