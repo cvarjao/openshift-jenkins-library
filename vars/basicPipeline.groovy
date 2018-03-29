@@ -20,7 +20,7 @@ def call(body) {
     body.delegate = context
     body()
 
-    def metadata=['appName':context.name]
+    //def metadata=['appName':context.name]
 
     properties([
             buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20'))

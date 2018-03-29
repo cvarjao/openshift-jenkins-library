@@ -121,7 +121,7 @@ class OpenShiftHelper {
                 boolean allDone = true
                 it.withEach { item ->
                     def object = item.object()
-                    script.echo "${key(object)} - ${object.status.phase}"
+                    script.echo "${key(object)} - ${getReplicationControllerStatus(object)}"
                     if (!isReplicationControllerComplete(object)) {
                         allDone = false
                     }
@@ -345,8 +345,12 @@ class OpenShiftHelper {
     private def freeze(OpenShiftDSL openshift, selector) {
         return openshift.selector(selector.names());
     }
+    private String getReplicationControllerStatus(rc) {
+        return rc.metadata.annotations['openshift.io/deployment.phase']
+    }
+
     private def isReplicationControllerComplete(rc) {
-        String phase=rc.metadata.annotations['openshift.io/deployment.phase']
+        String phase=getReplicationControllerStatus(rc)
         return ("Complete".equalsIgnoreCase(phase) || "Cancelled".equalsIgnoreCase(phase) || "Failed".equalsIgnoreCase(phase) || "Error".equalsIgnoreCase(phase))
     }
 
@@ -389,7 +393,7 @@ class OpenShiftHelper {
         if (!deployCfg.dcPrefix) deployCfg.dcPrefix=context.name
         if (!deployCfg.dcSuffix) deployCfg.dcSuffix="-${deployCfg.envName}"
 
-        script.echo "Deploying to '${context.name}'"
+        script.echo "Deploying '${context.name}' to '${context.build.envName}'"
         openshift.withCluster() {
             def buildProjectName="${openshift.project()}"
             def buildImageStreams=[:]
@@ -500,7 +504,7 @@ class OpenShiftHelper {
         }
 
         script.echo "Applying Configurations"
-        openshift.apply(models.values()).label(['app':"${context['app-name']}-${context['env-name']}", 'app-name':context['app-name'], 'env-name':context['env-name']], "--overwrite")
+        openshift.apply(models.values()).label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
         waitForDeploymentsToComplete(script, openshift, labels)
     }
 
