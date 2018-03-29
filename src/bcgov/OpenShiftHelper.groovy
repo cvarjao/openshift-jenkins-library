@@ -474,7 +474,7 @@ class OpenShiftHelper {
 
     private def applyDeploymentConfig(CpsScript script, OpenShiftDSL openshift, Map context) {
         Map deployCtx = context.deploy
-        def dcSelector=['app-name':context.name, 'env-name':deployCtx.envName];
+        def labels=['app-name':context.name, 'env-name':deployCtx.envName];
         def replicas=[:]
 
         Map initDeploymemtConfigStatus=loadDeploymentConfigStatus(openshift, labels)
@@ -492,9 +492,10 @@ class OpenShiftHelper {
         for (Map m : upserts) {
             String sourceImageStreamKey=context.build.status["BaseImageStream/${getImageStreamBaseName(m)}"]['ImageStream']
             Map sourceImageStream = context.build.status[sourceImageStreamKey]
-            openshift.tag("${sourceImageStream.metadata.namespace}/${sourceImageStream.metadata.name}:latest", "${m.metadata.name}:${dcSelector['env-name']}")
+            openshift.tag("${sourceImageStream.metadata.namespace}/${sourceImageStream.metadata.name}:latest", "${m.metadata.name}:${labels['env-name']}")
         }
         openshift.apply(models.values()).label(['app':"${context['app-name']}-${context['env-name']}", 'app-name':context['app-name'], 'env-name':context['env-name']], "--overwrite")
+        waitForDeploymentsToComplete(script, openshift, labels)
     }
 
     private Map loadDeploymentConfigStatus(OpenShiftDSL openshift, Map labels){
