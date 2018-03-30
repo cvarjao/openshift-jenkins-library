@@ -263,13 +263,13 @@ class OpenShiftHelper {
                         projects.add(env.project)
                     }
 
-                    //script.echo "Projects '${accessibleProjects}'"
+                    script.echo "Accessible Projects '${accessibleProjects}'"
 
                     for(String projectName: projects.unique()){
                         if (!accessibleProjects.contains(projectName)){
                             isReady=false
                             script.echo "Cannot access project '${projectName}'. Please run:"
-                            script.echo "  oc policy add-role-to-group edit ${currentUser} -n ${projectName}"
+                            script.echo "  oc policy add-role-to-user edit ${currentUser} -n ${projectName}"
                         }
                     }
 
@@ -458,12 +458,11 @@ class OpenShiftHelper {
         script.echo "Deploying '${context.name}' to '${context.deploy.envName}'"
         openshift.withCluster() {
             def buildProjectName="${openshift.project()}"
-            def buildImageStreams=[:]
 
             script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
 
-            //script.echo "buildImageStreams:${buildImageStreams}"
-            openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
+
+            //openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
                 openshift.withProject( deployCfg.projectName ) {
                     script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
                     //script.echo "DeployModels:${models}"
@@ -471,7 +470,7 @@ class OpenShiftHelper {
 
 
                 } // end openshift.withProject()
-            } // end openshift.withCredentials()
+            //} // end openshift.withCredentials()
         } // end openshift.withCluster()
     } // end 'deploy' method
 
