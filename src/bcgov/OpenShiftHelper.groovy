@@ -61,8 +61,13 @@ class OpenShiftHelper {
                         }
                     }
                 }
-
-                for (Map model in openshift.process(template.file?:template.template, createProcessTemplateParameters(template.params, context))){
+                List params=createProcessTemplateParameters(template.params, context)
+                String firstParam=template?.template
+                if (template.file){
+                    firstParam='-f'
+                    params.add(0, template.file)
+                }
+                for (Map model in openshift.process(firstParam, params)){
                     models[key(model)] = model
                 }
             }
