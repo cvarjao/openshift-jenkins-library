@@ -493,7 +493,7 @@ class OpenShiftHelper {
             //} // end openshift.withCredentials()
         } // end openshift.withCluster()
         context.remove('deploy')
-        new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
+        new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', [:])
     } // end 'deploy' method
 
     private def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
