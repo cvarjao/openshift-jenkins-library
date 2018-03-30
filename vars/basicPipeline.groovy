@@ -36,18 +36,7 @@ def call(body) {
             def ghDeploymentId = new GitHubHelper().createDeployment(this, GitHubHelper.getPullRequest(this).getHead().getSha(), ['environment':'build'])
             //GitHubHelper.getPullRequest(this).comment("Build in progress")
             new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
-
-            loadBuildMetadata(context)
-            //echo "metadata:\n${metadata}"
-            def stashIncludes=[]
-            for ( def templateCfg : context.bcModels + context.dcModels){
-                if ('-f'.equalsIgnoreCase(templateCfg[0])){
-                    stashIncludes.add(templateCfg[1])
-                }
-            }
-            stash(name: 'openshift', includes:stashIncludes.join(','))
-            echo 'Building ...'
-            unstash(name: 'openshift')
+            
             new OpenShiftHelper().build(this, context)
 
             //GitHubHelper.getPullRequest(this).comment("Build complete")

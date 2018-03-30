@@ -5,6 +5,25 @@ import com.openshift.jenkins.plugins.OpenShiftDSL;
 
 class OpenShiftHelper {
     int logLevel=0
+    private void loadMetadata(CpsScript script, Map metadata) {
+        metadata.commitId = script.sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
+        metadata.isPullRequest=(script.env.CHANGE_ID != null && script.env.CHANGE_ID.trim().length()>0)
+        metadata.gitRepoUrl = script.scm.getUserRemoteConfigs()[0].getUrl()
+
+        metadata.buildBranchName = script.env.BRANCH_NAME;
+        metadata.buildEnvName = 'bld'
+        metadata.buildNamePrefix = "${metadata.appName}"
+
+
+        if (metadata.isPullRequest){
+            metadata.pullRequestNumber=script.env.CHANGE_ID
+            metadata.gitBranchRemoteRef="refs/pull/${metadata.pullRequestNumber}/head";
+            metadata.buildEnvName="pr-${metadata.pullRequestNumber}"
+        }
+
+        metadata.buildNameSuffix = "-${metadata.buildEnvName}"
+    }
+
     @NonCPS
     private List getTemplateParameters(String parameters) {
         List ret=[]
@@ -221,7 +240,18 @@ class OpenShiftHelper {
     def build(CpsScript script, Map context) {
         OpenShiftDSL openshift=script.openshift;
 
+        def stashIncludes=[]
+        for ( List templates : context.templates.values()){
+            for ( Map template : templates){
+                if (template.file){
+                    stashIncludes.add(template.file)
+                }
+            }
+        }
 
+        loadMetadata(script, context)
+
+        script.stash(name: 'openshift', includes:stashIncludes.join(','))
         openshift.withCluster() {
             openshift.withProject(openshift.project()) {
                 //def metadata = context.metadata
