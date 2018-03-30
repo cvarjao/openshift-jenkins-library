@@ -249,12 +249,13 @@ class OpenShiftHelper {
             }
         }
 
-        script.echo "Projects '${openshift.raw('projects', '-q').out.tokenize()}'"
+
 
         loadMetadata(script, context)
 
         script.stash(name: 'openshift', includes:stashIncludes.join(','))
         openshift.withCluster() {
+            script.echo "Projects '${openshift.raw('projects', '-q').out.tokenize()}'"
             openshift.withProject(openshift.project()) {
                 script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
                 Map labels=['app-name': context.name, 'env-name': context.buildEnvName]
