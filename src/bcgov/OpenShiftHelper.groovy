@@ -274,7 +274,7 @@ class OpenShiftHelper {
                     }
 
                     if (!isReady) {
-                        input "Retry Access Check?"
+                        script.input "Retry Access Check?"
                     }
 
                     return isReady
