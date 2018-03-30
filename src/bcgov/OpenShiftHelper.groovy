@@ -25,21 +25,44 @@ class OpenShiftHelper {
     }
 
     @NonCPS
-    private def processStringTemplate(List params, Map bindings) {
+    private List createProcessTemplateParameters(Map params, Map bindings) {
         def engine = new groovy.text.GStringTemplateEngine()
         def ret=[]
-        for (def param:params) {
-            ret.add(engine.createTemplate(param).make(bindings).toString())
+        for (String paramName:params.keyset()) {
+            ret.add('-p')
+            ret.add(paramName+'='+engine.createTemplate(params[paramName]).make(bindings).toString())
         }
         return ret
     }
 
-    private Map loadObjectsFromTemplate(OpenShiftDSL openshift, List templates, Map context){
+    private Map loadObjectsFromTemplate(OpenShiftDSL openshift, List templates, Map context, String purpose){
         def models = [:]
         if (templates !=null && templates.size() > 0) {
             for (Map template : templates) {
-                def params = processStringTemplate(template, context)
-                for (Map model in openshift.process(params.remove(0), params)){
+                List parameters=getTemplateParameters(openshift.raw('process', '-f', template.file, '--parameters').out)
+                template.params = template.params?:[:]
+
+                for (String paramName:parameters){
+                    if ('build'.equals(purpose)) {
+                        if ('NAME_SUFFIX'.equals(paramName)) {
+                            template.params[paramName] = '${buildNameSuffix}'
+                        } else if ('SOURCE_REPOSITORY_URL'.equals(paramName)) {
+                            template.params[paramName] = '${gitRepoUrl}'
+                        } else if ('ENV_NAME'.equals(paramName)) {
+                            template.params[paramName] = '${buildEnvName}'
+                        }
+                    }else if ('deployment'.equals(purpose)) {
+                        if ('NAME_SUFFIX'.equals(paramName)) {
+                            template.params[paramName] = '${deploy.dcSuffix}'
+                        } else if ('SOURCE_REPOSITORY_URL'.equals(paramName)) {
+                            template.params[paramName] = '${gitRepoUrl}'
+                        } else if ('ENV_NAME'.equals(paramName)) {
+                            template.params[paramName] = '${deploy.envName}'
+                        }
+                    }
+                }
+
+                for (Map model in openshift.process(template.file?:template.template, createProcessTemplateParameters(template.params, context))){
                     models[key(model)] = model
                 }
             }
@@ -195,16 +218,8 @@ class OpenShiftHelper {
         openshift.withCluster() {
             openshift.withProject(openshift.project()) {
                 //def metadata = context.metadata
-
-                for (Map template:context.templates.build){
-                    List parameters=getTemplateParameters(openshift.raw('process', '-f', template.file, '--parameters').out)
-                    script.echo "${parameters}"
-                }
-                script.error "stop here"
-
-
                 Map labels=['app-name': context.name, 'env-name': context.buildEnvName]
-                def newObjects = loadObjectsFromTemplate(openshift, context.templates.build, context)
+                def newObjects = loadObjectsFromTemplate(openshift, context.templates.build, context, 'build')
                 def currentObjects = loadObjectsByLabel(openshift, labels)
 
                 for (Map m : newObjects.values()){
@@ -435,7 +450,7 @@ class OpenShiftHelper {
         def replicas=[:]
 
         Map initDeploymemtConfigStatus=loadDeploymentConfigStatus(openshift, labels)
-        Map models = loadObjectsFromTemplate(openshift, context.templates.deployment, context)
+        Map models = loadObjectsFromTemplate(openshift, context.templates.deployment, context,'deployment')
 
         if (initDeploymemtConfigStatus.size()>0){
             for (Map dc: initDeploymemtConfigStatus.values()) {
