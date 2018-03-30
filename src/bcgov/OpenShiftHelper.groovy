@@ -456,7 +456,7 @@ class OpenShiftHelper {
         if ("DEV".equalsIgnoreCase(envKeyName)) {
             envName = "dev-pr-${script.env.CHANGE_ID}"
         }
-        echo "Deploying to ${envKeyName.toUpperCase()} as ${envName}"
+        script.echo "Deploying to ${envKeyName.toUpperCase()} as ${envName}"
         Map deployCfg = [
                 'envName':envName,
                 'projectName':context.env[envKeyName].project,
