@@ -33,14 +33,7 @@ def call(body) {
     stage('Build') {
         node('master') {
             checkout scm
-            def ghDeploymentId = new GitHubHelper().createDeployment(this, GitHubHelper.getPullRequest(this).getHead().getSha(), ['environment':'build'])
-            //GitHubHelper.getPullRequest(this).comment("Build in progress")
-            new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
-            context['ENV_KEY_NAME'] = 'build'
-
             new OpenShiftHelper().build(this, context)
-
-            //GitHubHelper.getPullRequest(this).comment("Build complete")
         }
     }
     for(String envKeyName: context.env.keySet() as String[]){
@@ -68,24 +61,7 @@ def call(body) {
         if ("DEV".equalsIgnoreCase(stageDeployName) || "master".equalsIgnoreCase(env.CHANGE_TARGET)){
             stage("Deploy - ${stageDeployName}") {
                 node('master') {
-                    String envName = stageDeployName.toLowerCase()
-                    if ("DEV".equalsIgnoreCase(stageDeployName)) {
-                        envName = "dev-pr-${env.CHANGE_ID}"
-                    }
-                    echo "Deploying to ${stageDeployName} as ${envName}"
-                    //long ghDeploymentId = GitHubHelper.createDeployment(this, metadata.commit, ['environment':envName])
-                    context['deploy'] = [
-                            'envName':envName,
-                            'projectName':context.env[envKeyName].project,
-                            'envKeyName':envKeyName
-                    ]
-                    context['ENV_KEY_NAME'] = envKeyName
-                    //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
-                    unstash(name: 'openshift')
-                    new OpenShiftHelper().deploy(this, context)
-                    context.remove('deploy')
-                    //GitHubHelper.createDeploymentStatus(this, ghDeploymentId, GHDeploymentState.SUCCESS).create()
-                    //GitHubHelper.getPullRequest(this).comment("Deployed to DEV")
+                    new OpenShiftHelper().deploy(this, context, envKeyName)
                 }
             }
         }

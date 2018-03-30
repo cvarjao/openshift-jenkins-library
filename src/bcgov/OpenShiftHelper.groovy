@@ -251,6 +251,7 @@ class OpenShiftHelper {
 
         loadMetadata(script, context)
 
+        context['ENV_KEY_NAME'] = 'build'
         script.stash(name: 'openshift', includes:stashIncludes.join(','))
         openshift.withCluster() {
             openshift.withProject(openshift.project()) {
@@ -447,13 +448,32 @@ class OpenShiftHelper {
         return baseName
     }
 
-    void deploy(CpsScript script, Map context) {
+    void deploy(CpsScript script, Map context, String envKeyName) {
         //dcModels
         OpenShiftDSL openshift=script.openshift
-        Map deployCfg = context.deploy
+
+        String envName = envKeyName.toLowerCase()
+        if ("DEV".equalsIgnoreCase(envKeyName)) {
+            envName = "dev-pr-${script.env.CHANGE_ID}"
+        }
+        echo "Deploying to ${envKeyName.toUpperCase()} as ${envName}"
+        Map deployCfg = [
+                'envName':envName,
+                'projectName':context.env[envKeyName].project,
+                'envKeyName':envKeyName
+        ]
+        context['deploy'] = deployCfg
+
+        def ghDeploymentId = new GitHubHelper().createDeployment(script, GitHubHelper.getPullRequest(script).getHead().getSha(), ['environment':"${envKeyName.toUpperCase()}"])
+
+        //GitHubHelper.getPullRequest(script).comment("Build in progress")
+        //GitHubHelper.getPullRequest(script).comment("Deploying to DEV")
+
+        script.unstash(name: 'openshift')
 
         if (!deployCfg.dcPrefix) deployCfg.dcPrefix=context.name
         if (!deployCfg.dcSuffix) deployCfg.dcSuffix="-${deployCfg.envName}"
+        context['ENV_KEY_NAME'] = envKeyName
 
         script.echo "Deploying '${context.name}' to '${context.deploy.envName}'"
         openshift.withCluster() {
@@ -472,6 +492,8 @@ class OpenShiftHelper {
                 } // end openshift.withProject()
             //} // end openshift.withCredentials()
         } // end openshift.withCluster()
+        context.remove('deploy')
+        new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
     } // end 'deploy' method
 
     private def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
