@@ -36,7 +36,7 @@ def call(body) {
             def ghDeploymentId = new GitHubHelper().createDeployment(this, GitHubHelper.getPullRequest(this).getHead().getSha(), ['environment':'build'])
             //GitHubHelper.getPullRequest(this).comment("Build in progress")
             new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
-            
+            context['ENV_KEY_NAME'] = 'build'
             new OpenShiftHelper().build(this, context)
 
             //GitHubHelper.getPullRequest(this).comment("Build complete")
@@ -78,7 +78,7 @@ def call(body) {
                             'projectName':context.env[envKeyName].project,
                             'envKeyName':envKeyName
                     ]
-
+                    context['ENV_KEY_NAME'] = envKeyName
                     //GitHubHelper.getPullRequest(this).comment("Deploying to DEV")
                     unstash(name: 'openshift')
                     new OpenShiftHelper().deploy(this, context)

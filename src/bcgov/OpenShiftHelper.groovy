@@ -254,7 +254,7 @@ class OpenShiftHelper {
         script.stash(name: 'openshift', includes:stashIncludes.join(','))
         openshift.withCluster() {
             openshift.withProject(openshift.project()) {
-                //def metadata = context.metadata
+                script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
                 Map labels=['app-name': context.name, 'env-name': context.buildEnvName]
                 def newObjects = loadObjectsFromTemplate(openshift, context.templates.build, context, 'build')
                 def currentObjects = loadObjectsByLabel(openshift, labels)
@@ -434,11 +434,12 @@ class OpenShiftHelper {
             def buildProjectName="${openshift.project()}"
             def buildImageStreams=[:]
 
+            script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
+
             //script.echo "buildImageStreams:${buildImageStreams}"
             openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
                 openshift.withProject( deployCfg.projectName ) {
-                    String currentUser=openshift.raw('whoami').out
-                    script.echo "Conencted to project '${openshift.project()}' with user '${currentUser}'"
+                    script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
                     //script.echo "DeployModels:${models}"
                     applyDeploymentConfig(script, openshift, context)
 
