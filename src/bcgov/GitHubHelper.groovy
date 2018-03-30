@@ -110,6 +110,6 @@ class GitHubHelper {
     }
     static long createDeploymentStatus(CpsScript script, long deploymentId, String statusName, Map config) {
         script.echo "deploymentId:${deploymentId} - status:${statusName} - config:${config}"
-        //return createDeploymentStatus(script.scm.getUserRemoteConfigs()[0].getUrl(), deploymentId, statusName, config)
+        return createDeploymentStatus(script.scm.getUserRemoteConfigs()[0].getUrl(), deploymentId, statusName, config)
     }
 }
