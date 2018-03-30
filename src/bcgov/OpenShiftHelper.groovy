@@ -249,14 +249,37 @@ class OpenShiftHelper {
             }
         }
 
-
-
         loadMetadata(script, context)
 
         script.stash(name: 'openshift', includes:stashIncludes.join(','))
         openshift.withCluster() {
-            script.echo "Projects '${openshift.raw('projects', '-q').out.tokenize()}'"
             openshift.withProject(openshift.project()) {
+                String currentUser= openshift.raw('whoami').out.tokenize()[0]
+                script.waitUntil {
+                    boolean isReady = true
+                    List projects=[]
+                    List accessibleProjects=openshift.raw('projects', '-q').out.tokenize()
+                    for(Map env: context.env.values()){
+                        projects.add(env.project)
+                    }
+
+                    //script.echo "Projects '${accessibleProjects}'"
+
+                    for(String projectName: projects.unique()){
+                        if (!accessibleProjects.contains(projectName)){
+                            isReady=false
+                            script.echo "Cannot access project '${projectName}'. Please run:"
+                            script.echo "  oc policy add-role-to-group edit ${currentUser} -n ${projectName}"
+                        }
+                    }
+
+                    if (!isReady) {
+                        input "Retry Access Check?"
+                    }
+
+                    return isReady
+                }
+
                 script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
                 Map labels=['app-name': context.name, 'env-name': context.buildEnvName]
                 def newObjects = loadObjectsFromTemplate(openshift, context.templates.build, context, 'build')

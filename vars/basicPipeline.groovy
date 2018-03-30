@@ -37,6 +37,7 @@ def call(body) {
             //GitHubHelper.getPullRequest(this).comment("Build in progress")
             new GitHubHelper().createDeploymentStatus(this, ghDeploymentId, 'SUCCESS', [:])
             context['ENV_KEY_NAME'] = 'build'
+
             new OpenShiftHelper().build(this, context)
 
             //GitHubHelper.getPullRequest(this).comment("Build complete")
