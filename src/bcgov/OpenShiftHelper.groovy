@@ -249,6 +249,8 @@ class OpenShiftHelper {
             }
         }
 
+        script.echo "Projects '${openshift.raw('projects', '-q').out.tokenize()}'"
+
         loadMetadata(script, context)
 
         script.stash(name: 'openshift', includes:stashIncludes.join(','))
