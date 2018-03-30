@@ -6,6 +6,19 @@ import com.openshift.jenkins.plugins.OpenShiftDSL;
 class OpenShiftHelper {
     int logLevel=0
     @NonCPS
+    private List getTemplateParameters(String parameters) {
+        List ret=[]
+        boolean isTitleLine=true
+        for (String line:parameters.tokenize('\n')){
+            if (!isTitleLine){
+                ret.add(line.tokenize()[0])
+            }
+            isTitleLine=false;
+        }
+        return ret;
+    }
+
+    @NonCPS
     private def processStringTemplate(String template, Map bindings) {
         def engine = new groovy.text.GStringTemplateEngine()
         return engine.createTemplate(template).make(bindings).toString()
@@ -184,8 +197,8 @@ class OpenShiftHelper {
                 //def metadata = context.metadata
 
                 for (Map template:context.templates.build){
-                    String parameters=openshift.raw('process', '-f', template.file, '--parameters').out
-                    script.echo parameters
+                    List parameters=getTemplateParameters(openshift.raw('process', '-f', template.file, '--parameters').out)
+                    script.echo "${parameters}"
                 }
                 script.error "stop here"
 
