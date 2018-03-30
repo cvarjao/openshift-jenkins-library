@@ -28,7 +28,7 @@ class OpenShiftHelper {
     private List createProcessTemplateParameters(Map params, Map bindings) {
         def engine = new groovy.text.GStringTemplateEngine()
         def ret=[]
-        for (String paramName:params.keyset()) {
+        for (String paramName:params.keySet()) {
             ret.add('-p')
             ret.add(paramName+'='+engine.createTemplate(params[paramName]).make(bindings).toString())
         }
