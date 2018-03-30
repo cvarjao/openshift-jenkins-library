@@ -58,6 +58,8 @@ class OpenShiftHelper {
                             template.params[paramName] = '${gitRepoUrl}'
                         } else if ('ENV_NAME'.equals(paramName)) {
                             template.params[paramName] = '${deploy.envName}'
+                        } else if ('BUILD_ENV_NAME'.equals(paramName)) {
+                            template.params[paramName] = '${buildEnvName}'
                         }
                     }
                 }
