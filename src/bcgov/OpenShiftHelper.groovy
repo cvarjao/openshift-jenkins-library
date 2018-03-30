@@ -5,11 +5,26 @@ import com.openshift.jenkins.plugins.OpenShiftDSL;
 
 class OpenShiftHelper {
     int logLevel=0
+    @NonCPS
+    private def processStringTemplate(String template, Map bindings) {
+        def engine = new groovy.text.GStringTemplateEngine()
+        return engine.createTemplate(template).make(bindings).toString()
+    }
+
+    @NonCPS
+    private def processStringTemplate(List params, Map bindings) {
+        def engine = new groovy.text.GStringTemplateEngine()
+        def ret=[]
+        for (def param:params) {
+            ret.add(engine.createTemplate(param).make(bindings).toString())
+        }
+        return ret
+    }
 
     private Map loadObjectsFromTemplate(OpenShiftDSL openshift, List templates, Map context){
         def models = [:]
         if (templates !=null && templates.size() > 0) {
-            for (def template : templates) {
+            for (Map template : templates) {
                 def params = processStringTemplate(template, context)
                 for (Map model in openshift.process(params.remove(0), params)){
                     models[key(model)] = model
@@ -160,20 +175,28 @@ class OpenShiftHelper {
         //openshift.verbose(false)
     }
 
-    def build(CpsScript script, Map __context) {
+    def build(CpsScript script, Map context) {
         OpenShiftDSL openshift=script.openshift;
 
 
         openshift.withCluster() {
             openshift.withProject(openshift.project()) {
-                //def metadata = __context.metadata
-                Map labels=['app-name': __context.name, 'env-name': __context.buildEnvName]
-                def newObjects = loadObjectsFromTemplate(openshift, __context.bcModels, __context)
+                //def metadata = context.metadata
+
+                for (Map template:context.templates.build){
+                    String parameters=openshift.raw('process', '-f', template.file, '--parameters').out
+                    script.echo parameters
+                }
+                script.error "stop here"
+
+
+                Map labels=['app-name': context.name, 'env-name': context.buildEnvName]
+                def newObjects = loadObjectsFromTemplate(openshift, context.templates.build, context)
                 def currentObjects = loadObjectsByLabel(openshift, labels)
 
                 for (Map m : newObjects.values()){
                     if ('BuildConfig'.equalsIgnoreCase(m.kind)){
-                        String commitId = __context.commitId
+                        String commitId = context.commitId
                         String contextDir=null
 
                         if (m.spec && m.spec.source && m.spec.source.contextDir){
@@ -199,7 +222,7 @@ class OpenShiftHelper {
 
                 def initialBuildConfigState=loadBuildConfigStatus(openshift, labels)
 
-                applyBuildConfig(script, openshift, __context.name, __context.buildEnvName, newObjects, currentObjects);
+                applyBuildConfig(script, openshift, context.name, context.buildEnvName, newObjects, currentObjects);
                 script.echo "Waiting for builds to complete"
 
                 waitForBuildsToComplete(script, openshift, labels)
@@ -249,7 +272,7 @@ class OpenShiftHelper {
                     buildOutput["BaseImageStream/${baseName}"]=['ImageStream':key(iso)]
                 }
 
-                __context['build'] = ['status':buildOutput, 'projectName':"${openshift.project()}"]
+                context['build'] = ['status':buildOutput, 'projectName':"${openshift.project()}"]
 
 
             }
@@ -360,23 +383,6 @@ class OpenShiftHelper {
         } // end openshift.withCluster()
     } // end 'deploy' method
 
-
-    @NonCPS
-    private def processStringTemplate(String template, Map bindings) {
-        def engine = new groovy.text.GStringTemplateEngine()
-        return engine.createTemplate(template).make(bindings).toString()
-    }
-
-    @NonCPS
-    private def processStringTemplate(List params, Map bindings) {
-        def engine = new groovy.text.GStringTemplateEngine()
-        def ret=[]
-        for (def param:params) {
-            ret.add(engine.createTemplate(param).make(bindings).toString())
-        }
-        return ret
-    }
-
     private def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
         for ( c in containers ) {
             for ( t in triggers) {
@@ -416,7 +422,7 @@ class OpenShiftHelper {
         def replicas=[:]
 
         Map initDeploymemtConfigStatus=loadDeploymentConfigStatus(openshift, labels)
-        Map models = loadObjectsFromTemplate(openshift, context.dcModels, context)
+        Map models = loadObjectsFromTemplate(openshift, context.templates.deployment, context)
 
         if (initDeploymemtConfigStatus.size()>0){
             for (Map dc: initDeploymemtConfigStatus.values()) {
