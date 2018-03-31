@@ -28,12 +28,12 @@ class OpenShiftHelper {
         metadata.buildNameSuffix = "-${metadata.buildEnvName}"
     }
 
-    @NonCPS
+    
     private boolean allowCreateOrUpdate(Map newModel, currentModel) {
         if(PROTECTED_TYPES.contains(newModel.kind)){
             if (
-            (currentModel==null && Boolean.parseBoolean(newModel.metadata.annotations[ANNOTATION_ALLOW_CREATE]?:'false')) ||
-                    (currentModel!=null && Boolean.parseBoolean(newModel.metadata.annotations[ANNOTATION_ALLOW_UPDATE]?:'false'))
+            (currentModel==null && Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_CREATE]?:'false')) ||
+                    (currentModel!=null && Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_UPDATE]?:'false'))
             ){
                 return true
             }
