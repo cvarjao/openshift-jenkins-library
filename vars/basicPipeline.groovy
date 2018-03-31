@@ -20,7 +20,6 @@ def call(body) {
     body.delegate = context
     body()
 
-    //def metadata=['appName':context.name]
 
     properties([
             buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20'))
@@ -39,18 +38,9 @@ def call(body) {
     for(String envKeyName: context.env.keySet() as String[]){
         stageDeployName=envKeyName.toUpperCase()
         if (!"DEV".equalsIgnoreCase(stageDeployName) && "master".equalsIgnoreCase(env.CHANGE_TARGET)){
-            stage("Check - ${stageDeployName}") {
+            stage("Readiness - ${stageDeployName}") {
                 node('master') {
-                    waitUntil {
-                        try {
-                            //do something
-                            unstash(name: 'openshift')
-                            return true
-                        } catch (ex) {
-                            input "Retry Validation?"
-                            return false
-                        }
-                    }
+                    new OpenShiftHelper().waitUntilEnvironmentIsReady(this, context, envKeyName)
                 }
             }
             stage("Approve - ${stageDeployName}") {
@@ -65,7 +55,6 @@ def call(body) {
                 }
             }
         }
-
     }
     stage('Cleanup') { }
 

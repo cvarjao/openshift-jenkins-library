@@ -5,6 +5,10 @@ import com.openshift.jenkins.plugins.OpenShiftDSL;
 
 class OpenShiftHelper {
     int logLevel=0
+    static List PROTECTED_TYPES = ['Secret', 'ConfigMap', 'PersistentVolumeClaim']
+    static String ANNOTATION_ALLOW_CREATE='template.openshift.io.bcgov/create'
+    static String ANNOTATION_ALLOW_UPDATE='template.openshift.io.bcgov/update'
+
     private void loadMetadata(CpsScript script, Map metadata) {
         metadata.commitId = script.sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
         metadata.isPullRequest=(script.env.CHANGE_ID != null && script.env.CHANGE_ID.trim().length()>0)
@@ -22,6 +26,21 @@ class OpenShiftHelper {
         }
 
         metadata.buildNameSuffix = "-${metadata.buildEnvName}"
+    }
+
+    @NonCPS
+    private boolean allowCreateOrUpdate(Map newModel, currentModel) {
+        if(PROTECTED_TYPES.contains(newModel.kind)){
+            if (
+            (currentModel==null && Boolean.parseBoolean(newModel.metadata.annotations[ANNOTATION_ALLOW_CREATE]?:'false')) ||
+                    (currentModel!=null && Boolean.parseBoolean(newModel.metadata.annotations[ANNOTATION_ALLOW_UPDATE]?:'false'))
+            ){
+                return true
+            }
+        }else {
+            return true
+        }
+        return false
     }
 
     @NonCPS
@@ -237,6 +256,34 @@ class OpenShiftHelper {
         //openshift.verbose(false)
     }
 
+    private void checkProjectsAccess(CpsScript script, OpenShiftDSL openshift, Map context){
+        String currentUser= openshift.raw('whoami').out.tokenize()[0]
+        script.waitUntil {
+            boolean isReady = true
+            List projects=[]
+            List accessibleProjects=openshift.raw('projects', '-q').out.tokenize()
+            for(Map env: context.env.values()){
+                projects.add(env.project)
+            }
+
+            script.echo "Accessible Projects '${accessibleProjects}'"
+
+            for(String projectName: projects.unique()){
+                if (!accessibleProjects.contains(projectName)){
+                    isReady=false
+                    script.echo "Cannot access project '${projectName}'. Please run:"
+                    script.echo "  oc policy add-role-to-user edit ${currentUser} -n ${projectName}"
+                }
+            }
+
+            if (!isReady) {
+                script.input "Retry Access Check?"
+            }
+
+            return isReady
+        }
+    }
+
     def build(CpsScript script, Map context) {
         OpenShiftDSL openshift=script.openshift;
 
@@ -255,33 +302,9 @@ class OpenShiftHelper {
         script.stash(name: 'openshift', includes:stashIncludes.join(','))
         openshift.withCluster() {
             openshift.withProject(openshift.project()) {
-                String currentUser= openshift.raw('whoami').out.tokenize()[0]
-                script.waitUntil {
-                    boolean isReady = true
-                    List projects=[]
-                    List accessibleProjects=openshift.raw('projects', '-q').out.tokenize()
-                    for(Map env: context.env.values()){
-                        projects.add(env.project)
-                    }
+                checkProjectsAccess(script, openshift, context)
 
-                    script.echo "Accessible Projects '${accessibleProjects}'"
-
-                    for(String projectName: projects.unique()){
-                        if (!accessibleProjects.contains(projectName)){
-                            isReady=false
-                            script.echo "Cannot access project '${projectName}'. Please run:"
-                            script.echo "  oc policy add-role-to-user edit ${currentUser} -n ${projectName}"
-                        }
-                    }
-
-                    if (!isReady) {
-                        script.input "Retry Access Check?"
-                    }
-
-                    return isReady
-                }
-
-                script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
+                script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out.tokenize()[0]}'"
                 Map labels=['app-name': context.name, 'env-name': context.buildEnvName]
                 def newObjects = loadObjectsFromTemplate(openshift, context.templates.build, context, 'build')
                 def currentObjects = loadObjectsByLabel(openshift, labels)
@@ -448,52 +471,72 @@ class OpenShiftHelper {
         return baseName
     }
 
-    void deploy(CpsScript script, Map context, String envKeyName) {
-        //dcModels
+    void waitUntilEnvironmentIsReady(CpsScript script, Map context, String envKeyName){
         OpenShiftDSL openshift=script.openshift
+        script.waitUntil {
+            try {
+                Map deployCfg = createDeployContext(script, context, envKeyname)
+                return true
+            } catch (ex) {
+                script.input "Retry Environment Readiness Check?"
+                return false
+            }
+        }
+    }
 
+    private Map createDeployContext(CpsScript script, Map context, String envKeyName) {
         String envName = envKeyName.toLowerCase()
         if ("DEV".equalsIgnoreCase(envKeyName)) {
             envName = "dev-pr-${script.env.CHANGE_ID}"
         }
-        script.echo "Deploying to ${envKeyName.toUpperCase()} as ${envName}"
         Map deployCfg = [
                 'envName':envName,
                 'projectName':context.env[envKeyName].project,
                 'envKeyName':envKeyName
         ]
+
+        if (!deployCfg.dcPrefix) deployCfg.dcPrefix = context.name
+        if (!deployCfg.dcSuffix) deployCfg.dcSuffix = "-${deployCfg.envName}"
+
+        deployCfg['labels']=['app-name':context.name, 'env-name':envName]
+
+        return deployCfg
+    }
+    void deploy(CpsScript script, Map context, String envKeyName) {
+        OpenShiftDSL openshift=script.openshift
+        Map deployCfg = createDeployContext(script, context, envKeyname)
         context['deploy'] = deployCfg
+        script.echo "Deploying to ${envKeyName.toUpperCase()} as ${deployCfg.envName}"
 
         def ghDeploymentId = new GitHubHelper().createDeployment(script, GitHubHelper.getPullRequest(script).getHead().getSha(), ['environment':"${envKeyName.toUpperCase()}"])
+        try {
+            //GitHubHelper.getPullRequest(script).comment("Build in progress")
+            //GitHubHelper.getPullRequest(script).comment("Deploying to DEV")
 
-        //GitHubHelper.getPullRequest(script).comment("Build in progress")
-        //GitHubHelper.getPullRequest(script).comment("Deploying to DEV")
+            script.unstash(name: 'openshift')
 
-        script.unstash(name: 'openshift')
+            context['DEPLOY_ENV_NAME'] = envKeyName
 
-        if (!deployCfg.dcPrefix) deployCfg.dcPrefix=context.name
-        if (!deployCfg.dcSuffix) deployCfg.dcSuffix="-${deployCfg.envName}"
-        context['ENV_KEY_NAME'] = envKeyName
+            script.echo "Deploying '${context.name}' to '${context.deploy.envName}'"
+            openshift.withCluster() {
+                script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
 
-        script.echo "Deploying '${context.name}' to '${context.deploy.envName}'"
-        openshift.withCluster() {
-            def buildProjectName="${openshift.project()}"
-
-            script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
-
-
-            //openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
-                openshift.withProject( deployCfg.projectName ) {
+                //openshift.withCredentials( 'jenkins-deployer-dev.token' ) {
+                openshift.withProject(deployCfg.projectName) {
                     script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
                     //script.echo "DeployModels:${models}"
                     applyDeploymentConfig(script, openshift, context)
 
 
                 } // end openshift.withProject()
-            //} // end openshift.withCredentials()
-        } // end openshift.withCluster()
-        context.remove('deploy')
-        new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', [:])
+                //} // end openshift.withCredentials()
+            } // end openshift.withCluster()
+            context.remove('deploy')
+            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', [:])
+        }catch (all) {
+            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'ERROR', [:])
+            throw new Exception(all)
+        }
     } // end 'deploy' method
 
     private def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
@@ -531,8 +574,7 @@ class OpenShiftHelper {
 
     private def applyDeploymentConfig(CpsScript script, OpenShiftDSL openshift, Map context) {
         Map deployCtx = context.deploy
-        def labels=['app-name':context.name, 'env-name':deployCtx.envName];
-        def replicas=[:]
+        def labels=deployCtx.labels
 
         Map initDeploymemtConfigStatus=loadDeploymentConfigStatus(openshift, labels)
         Map models = loadObjectsFromTemplate(openshift, context.templates.deployment, context,'deployment')
@@ -565,7 +607,6 @@ class OpenShiftHelper {
         }
         script.echo "Applying ImageStream"
         openshift.apply(upserts)
-        //.label(['app':"${context['app-name']}-${context['env-name']}", 'app-name':context['app-name'], 'env-name':context['env-name']], "--overwrite")
         for (Map m : upserts) {
             String sourceImageStreamKey=context.build.status["BaseImageStream/${getImageStreamBaseName(m)}"]['ImageStream']
             Map sourceImageStream = context.build.status[sourceImageStreamKey]
@@ -575,9 +616,15 @@ class OpenShiftHelper {
             script.echo "Tagging '${sourceImageStreamRef}' as '${targetImageStreamRef}'"
             openshift.tag(sourceImageStreamRef, targetImageStreamRef)
         }
-
         script.echo "Applying Configurations"
-        openshift.apply(models.values()).label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
+        upserts.clear()
+        for (Map m : models.values()) {
+            Map current = initDeploymemtConfigStatus.containsKey(key(m))
+            if(allowCreateOrUpdate(m, current)){
+                upserts.add(m)
+            }
+        }
+        openshift.apply(upserts).label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
         waitForDeploymentsToComplete(script, openshift, labels)
     }
 
