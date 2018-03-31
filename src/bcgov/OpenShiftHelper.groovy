@@ -29,18 +29,20 @@ class OpenShiftHelper {
     }
 
 
-    private boolean allowCreateOrUpdate(Map newModel, currentModel) {
+    private boolean allowCreateOrUpdate(Map newModel, Map currentModel) {
+        /*
         if(PROTECTED_TYPES.contains(newModel.kind)){
             if (
-            (currentModel==null && Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_CREATE]?:'false')) ||
-                    (currentModel!=null && Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_UPDATE]?:'false'))
+            (currentModel==null && Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_CREATE]?:'false')==true) ||
+                    (currentModel!=null && Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_UPDATE]?:'false')==true)
             ){
                 return true
             }
         }else {
             return true
         }
-        return false
+        */
+        return true
     }
 
     @NonCPS
