@@ -296,6 +296,8 @@ class OpenShiftHelper {
             }
         }
 
+        script.echo "BRANCH_NAME=${script.env.BRANCH_NAME}\nCHANGE_ID=${script.env.CHANGE_ID}\nCHANGE_TARGET=${script.env.CHANGE_TARGET}\nBUILD_URL=${script.env.BUILD_URL}"
+
         loadMetadata(script, context)
 
         context['ENV_KEY_NAME'] = 'build'
@@ -504,7 +506,7 @@ class OpenShiftHelper {
     }
     void deploy(CpsScript script, Map context, String envKeyName) {
         OpenShiftDSL openshift=script.openshift
-        Map deployCfg = createDeployContext(script, context, envKeyname)
+        Map deployCfg = createDeployContext(script, context, envKeyName)
         context['deploy'] = deployCfg
         script.echo "Deploying to ${envKeyName.toUpperCase()} as ${deployCfg.envName}"
 
