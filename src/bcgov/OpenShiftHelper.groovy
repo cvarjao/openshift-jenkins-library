@@ -30,7 +30,7 @@ class OpenShiftHelper {
 
 
     private boolean allowCreateOrUpdate(Map newModel, Map currentModel) {
-        /*
+
         if(PROTECTED_TYPES.contains(newModel.kind)){
             if (
             (currentModel==null && Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_CREATE]?:'false')==true) ||
@@ -41,8 +41,7 @@ class OpenShiftHelper {
         }else {
             return true
         }
-        */
-        return true
+        return false
     }
 
     @NonCPS
@@ -479,7 +478,7 @@ class OpenShiftHelper {
         OpenShiftDSL openshift=script.openshift
         script.waitUntil {
             try {
-                Map deployCfg = createDeployContext(script, context, envKeyname)
+                Map deployCfg = createDeployContext(script, context, envKeyName)
                 return true
             } catch (ex) {
                 script.input "Retry Environment Readiness Check?"
