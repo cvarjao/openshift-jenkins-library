@@ -623,7 +623,7 @@ class OpenShiftHelper {
         script.echo "Applying Configurations"
         upserts.clear()
         for (Map m : models.values()) {
-            Map current = initDeploymemtConfigStatus.containsKey(key(m))
+            Map current = initDeploymemtConfigStatus[key(m)]
             if(allowCreateOrUpdate(m, current)){
                 upserts.add(m)
             }
