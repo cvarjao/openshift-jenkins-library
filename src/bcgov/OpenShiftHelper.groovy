@@ -28,7 +28,7 @@ class OpenShiftHelper {
         metadata.buildNameSuffix = "-${metadata.buildEnvName}"
     }
 
-    
+
     private boolean allowCreateOrUpdate(Map newModel, currentModel) {
         if(PROTECTED_TYPES.contains(newModel.kind)){
             if (
@@ -511,7 +511,7 @@ class OpenShiftHelper {
         script.echo "Deploying to ${envKeyName.toUpperCase()} as ${deployCfg.envName}"
 
         def ghDeploymentId = new GitHubHelper().createDeployment(script, GitHubHelper.getPullRequest(script).getHead().getSha(), ['environment':"${envKeyName.toUpperCase()}"])
-        try {
+        //try {
             //GitHubHelper.getPullRequest(script).comment("Build in progress")
             //GitHubHelper.getPullRequest(script).comment("Deploying to DEV")
 
@@ -535,10 +535,10 @@ class OpenShiftHelper {
             } // end openshift.withCluster()
             context.remove('deploy')
             new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', [:])
-        }catch (all) {
-            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'ERROR', [:])
-            throw new Exception(all)
-        }
+        //}catch (all) {
+        //    new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'ERROR', [:])
+        //    throw new Exception(all)
+        //}
     } // end 'deploy' method
 
     private def updateContainerImages(CpsScript script, OpenShiftDSL openshift, containers, triggers) {
