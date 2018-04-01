@@ -521,6 +521,8 @@ class OpenShiftHelper {
 
         new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'PENDING', ['targetUrl':"${script.env.BUILD_URL}console"])
 
+        new GitHubHelper().createCommitStatus(script, context.commitId, 'PENDING', "${script.env.BUILD_URL}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
+
         //try {
             //GitHubHelper.getPullRequest(script).comment("Build in progress")
             //GitHubHelper.getPullRequest(script).comment("Deploying to DEV")
@@ -545,6 +547,7 @@ class OpenShiftHelper {
             } // end openshift.withCluster()
             context.remove('deploy')
             new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', ['targetUrl':"${script.env.BUILD_URL}console"])
+            new GitHubHelper().createCommitStatus(script, context.commitId, 'SUCCESS', "${script.env.BUILD_URL}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
         //}catch (all) {
         //    new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'ERROR', [:])
         //    throw new Exception(all)

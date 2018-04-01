@@ -23,6 +23,9 @@ class GitHubHelper {
         return getGitHubRepository(script).getPullRequest(Integer.parseInt(script.env.CHANGE_ID))
     }
 
+    static GHRepository getPullRequestLastCommitId(CpsScript script){
+        return getPullRequest(script).getHead().getSha()
+    }
 
     static GHDeploymentBuilder createDeployment(CpsScript script, String ref) {
         return getGitHubRepository(script).createDeployment(ref)
