@@ -298,6 +298,7 @@ class OpenShiftHelper {
         }
 
         script.echo "BRANCH_NAME=${script.env.BRANCH_NAME}\nCHANGE_ID=${script.env.CHANGE_ID}\nCHANGE_TARGET=${script.env.CHANGE_TARGET}\nBUILD_URL=${script.env.BUILD_URL}"
+        script.echo "absoluteUrl=${script.currentBuild.absoluteUrl}"
 
         loadMetadata(script, context)
 
@@ -510,8 +511,13 @@ class OpenShiftHelper {
         Map deployCfg = createDeployContext(script, context, envKeyName)
         context['deploy'] = deployCfg
         script.echo "Deploying to ${envKeyName.toUpperCase()} as ${deployCfg.envName}"
+        //GitHubHelper.getPullRequest(script).getHead().getSha()
 
-        def ghDeploymentId = new GitHubHelper().createDeployment(script, GitHubHelper.getPullRequest(script).getHead().getSha(), ['environment':"${envKeyName.toUpperCase()}"])
+        def ghDeploymentId = new GitHubHelper().createDeployment(script, context.commitId, ['environment':"${envKeyName.toUpperCase()}"])
+        deployCfg['ghDeploymentId'] = ghDeploymentId
+
+        new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'PENDING', ['targetUrl':"${script.env.BUILD_URL}/console"])
+
         //try {
             //GitHubHelper.getPullRequest(script).comment("Build in progress")
             //GitHubHelper.getPullRequest(script).comment("Deploying to DEV")

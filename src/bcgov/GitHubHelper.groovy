@@ -58,11 +58,11 @@ class GitHubHelper {
 
 
         //deployment=null
-        /*
+
         if (deploymentConfig!=null) {
-            if (deploymentConfig.environment) {
-                builder.environment(deploymentConfig.environment)
-            }
+            //if (deploymentConfig.environment) {
+            //    builder.environment(deploymentConfig.environment)
+            //}
 
             if (deploymentConfig.payload) {
                 builder.payload(deploymentConfig.payload)
@@ -80,6 +80,8 @@ class GitHubHelper {
                 builder.requiredContexts(deploymentConfig.requiredContexts)
             }
         }
+        
+        /*
         long deploymentId = builder.create().getId()
         builder=null;
         return deploymentId
