@@ -37,7 +37,6 @@ def call(body) {
     }
     for(String envKeyName: context.env.keySet() as String[]){
         String stageDeployName=envKeyName.toUpperCase()
-        new GitHubHelper().createCommitStatus(this, GitHubHelper.getPullRequestLastCommitId(this), 'PENDING', "${env.BUILD_URL}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
         if (!"DEV".equalsIgnoreCase(stageDeployName) && "master".equalsIgnoreCase(env.CHANGE_TARGET)){
             stage("Readiness - ${stageDeployName}") {
                 node('master') {
