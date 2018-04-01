@@ -33,6 +33,9 @@ def call(body) {
         node('master') {
             checkout scm
             new OpenShiftHelper().build(this, context)
+            if ("master".equalsIgnoreCase(env.CHANGE_TARGET)) {
+                new OpenShiftHelper().prepareForCD(this, context)
+            }
         }
     }
     for(String envKeyName: context.env.keySet() as String[]){
