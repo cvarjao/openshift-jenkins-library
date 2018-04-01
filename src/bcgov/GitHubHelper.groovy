@@ -114,4 +114,15 @@ class GitHubHelper {
         script.echo "deploymentId:${deploymentId} - status:${statusName} - config:${config}"
         return createDeploymentStatus(script.scm.getUserRemoteConfigs()[0].getUrl(), deploymentId, statusName, config)
     }
+    @NonCPS
+    void createCommitStatus(String url, String sha1, String statusName, String targetUrl, String description, String context) {
+        def ghRepo=getGitHubRepository(url)
+        def ghCommitState=GHCommitState.valueOf(statusName)
+
+        ghRepo.createCommitStatus(sha1, ghCommitState, targetUrl, description, context)
+    }
+
+    void createCommitStatus(CpsScript script, String ref, String statusName, String targetUrl, String description, String context) {
+        createCommitStatus(script.scm.getUserRemoteConfigs()[0].getUrl() as String, ref, statusName, targetUrl, description, context)
+    }
 }

@@ -302,6 +302,8 @@ class OpenShiftHelper {
 
         loadMetadata(script, context)
 
+        new GitHubHelper().createCommitStatus(script, context.commitId, 'PENDING', "${script.env.BUILD_URL}", 'Build', 'continuous-integration/jenkins/build')
+
         context['ENV_KEY_NAME'] = 'build'
         script.stash(name: 'openshift', includes:stashIncludes.join(','))
         openshift.withCluster() {
@@ -394,8 +396,9 @@ class OpenShiftHelper {
                 context['build'] = ['status':buildOutput, 'projectName':"${openshift.project()}"]
 
 
-            }
-        }
+            }// enf withProject
+        } // end withCluster
+        new GitHubHelper().createCommitStatus(script, context.commitId, 'SUCCESS', "${script.env.BUILD_URL}", 'Build', 'continuous-integration/jenkins/build')
     }
 
     private def applyBuildConfig(CpsScript script, OpenShiftDSL openshift, String appName, String envName, Map models, Map currentModels) {
