@@ -516,7 +516,7 @@ class OpenShiftHelper {
         def ghDeploymentId = new GitHubHelper().createDeployment(script, context.commitId, ['environment':"${envKeyName.toUpperCase()}"])
         deployCfg['ghDeploymentId'] = ghDeploymentId
 
-        new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'PENDING', ['targetUrl':"${script.env.BUILD_URL}/console"])
+        new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'PENDING', ['targetUrl':"${script.env.BUILD_URL}console"])
 
         //try {
             //GitHubHelper.getPullRequest(script).comment("Build in progress")
@@ -541,7 +541,7 @@ class OpenShiftHelper {
                 //} // end openshift.withCredentials()
             } // end openshift.withCluster()
             context.remove('deploy')
-            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', [:])
+            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', ['targetUrl':"${script.env.BUILD_URL}console"])
         //}catch (all) {
         //    new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'ERROR', [:])
         //    throw new Exception(all)

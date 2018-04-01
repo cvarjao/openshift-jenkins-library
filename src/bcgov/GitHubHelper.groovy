@@ -80,7 +80,7 @@ class GitHubHelper {
                 builder.requiredContexts(deploymentConfig.requiredContexts)
             }
         }
-        
+
         /*
         long deploymentId = builder.create().getId()
         builder=null;
