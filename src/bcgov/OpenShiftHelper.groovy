@@ -597,7 +597,7 @@ class OpenShiftHelper {
             context.remove('deploy')
             context.deployments = context.deployments?:[:]
             context.deployments[envKeyName]=deployCfg
-            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', ['targetUrl':"${deployCfg.logUrl}"])
+            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', ['targetUrl':"${deployCfg.environmentUrl}"])
             new GitHubHelper().createCommitStatus(script, context.commitId, 'SUCCESS', "${deployCfg.logUrl}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
         //}catch (all) {
         //    new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'ERROR', [:])
@@ -696,9 +696,9 @@ class OpenShiftHelper {
         openshift.selector('route', labels).withEach {
             Map route= it.object()
             if (route.spec.tls){
-                deployCtx['environment_url']= "https://${route.spec.host}/"
+                deployCtx['environmentUrl']= "https://${route.spec.host}/"
             }else{
-                deployCtx['environment_url']= "http://${route.spec.host}/"
+                deployCtx['environmentUrl']= "http://${route.spec.host}/"
             }
         }
 
