@@ -70,6 +70,8 @@ def call(body) {
     stage('Cleanup') {
         def inputResponse=input(id: 'close_pr', message: "Ready to Accept/Merge, and Close pull-request #${env.CHANGE_ID}?", ok: 'Yes', submitter: 'authenticated', submitterParameter: 'approver')
         echo "inputResponse:${inputResponse}"
+
+        new OpenShiftHelper().cleanup(this, context)
         GitHubHelper.mergeAndClosePullRequest(this)
     }
 }

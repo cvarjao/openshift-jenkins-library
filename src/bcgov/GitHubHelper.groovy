@@ -50,8 +50,6 @@ class GitHubHelper {
                 GHRef headRef = repo.getRef('heads/' + head.getRef())
                 if (headRef != null) {
                     headRef.delete()
-                }else{
-                    doClose=false
                 }
             }
 

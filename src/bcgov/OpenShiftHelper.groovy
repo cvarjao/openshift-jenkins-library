@@ -514,7 +514,8 @@ class OpenShiftHelper {
                 'envName':envName,
                 'projectName':context.env[envKeyName].project,
                 'envKeyName':envKeyName,
-                'transient': transientEnv
+                'transient': transientEnv,
+                'logUrl': "${script.env.BUILD_URL}"
         ]
 
         if (!deployCfg.dcPrefix) deployCfg.dcPrefix = context.name
@@ -524,6 +525,37 @@ class OpenShiftHelper {
 
         return deployCfg
     }
+
+    @NonCPS
+    List labelsToArgs(Map labels) {
+        List args=[]
+        labels.each { String key, String value ->
+            args.addAll(['-l', "${key}=${value}"])
+        }
+        return args
+    }
+
+    void cleanup(CpsScript script, Map context) {
+        OpenShiftDSL openshift=script.openshift
+        for (Map deployment:context.deployments.values()){
+            if (deployment.transient == true){
+                openshift.withCluster(){
+                    openshift.withProject(deployment.projectName) {
+                        def result=openshift.delete((['all'] + labelsToArgs(deployment.labels)) as String[])
+                        script.echo "Output: ${result}"
+
+                        def protectedSelector=openshift.selector('secret,configmap', context.labels)
+                        if (protectedSelector.count() > 0) {
+                            script.echo "Deleting: ${protectedSelector.names()}"
+                            result=openshift.delete((['secret,configmap'] + labelsToArgs(deployment.labels)) as String[])
+                            script.echo "Output: ${result}"
+                        }
+                    } // end withProject
+                } // end withCluster
+            }
+        }
+    }
+
     void deploy(CpsScript script, Map context, String envKeyName) {
         OpenShiftDSL openshift=script.openshift
         Map deployCfg = createDeployContext(script, context, envKeyName)
@@ -534,9 +566,9 @@ class OpenShiftHelper {
         def ghDeploymentId = new GitHubHelper().createDeployment(script, context.commitId, ['environment':"${envKeyName.toUpperCase()}", 'payload':toJsonString(deployCfg), 'task':"deploy:pull:${script.env.CHANGE_ID}"])
         deployCfg['ghDeploymentId'] = ghDeploymentId
 
-        new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'PENDING', ['targetUrl':"${script.env.BUILD_URL}"])
+        new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'PENDING', ['targetUrl':"${deployCfg.logUrl}"])
 
-        new GitHubHelper().createCommitStatus(script, context.commitId, 'PENDING', "${script.env.BUILD_URL}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
+        new GitHubHelper().createCommitStatus(script, context.commitId, 'PENDING', "${deployCfg.logUrl}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
 
         //try {
             //GitHubHelper.getPullRequest(script).comment("Build in progress")
@@ -561,8 +593,10 @@ class OpenShiftHelper {
                 //} // end openshift.withCredentials()
             } // end openshift.withCluster()
             context.remove('deploy')
-            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', ['targetUrl':"${script.env.BUILD_URL}"])
-            new GitHubHelper().createCommitStatus(script, context.commitId, 'SUCCESS', "${script.env.BUILD_URL}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
+            context.deployments == context.deployments?:[]
+            context.deployments[envKeyName]=deployCfg
+            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', ['targetUrl':"${deployCfg.logUrl}"])
+            new GitHubHelper().createCommitStatus(script, context.commitId, 'SUCCESS', "${deployCfg.logUrl}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
         //}catch (all) {
         //    new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'ERROR', [:])
         //    throw new Exception(all)
@@ -602,7 +636,7 @@ class OpenShiftHelper {
         }
     }
 
-    private def applyDeploymentConfig(CpsScript script, OpenShiftDSL openshift, Map context) {
+    private void applyDeploymentConfig(CpsScript script, OpenShiftDSL openshift, Map context) {
         Map deployCtx = context.deploy
         def labels=deployCtx.labels
 
@@ -656,6 +690,18 @@ class OpenShiftHelper {
         }
         openshift.apply(upserts).label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
         waitForDeploymentsToComplete(script, openshift, labels)
+
+        openshift.selector('route', labels).withEach {
+            Map route= it.object()
+            if (route.spec.tls){
+                deployCtx['environment_url']= "https://${route.spec.host}/"
+            }else{
+                deployCtx['environment_url']= "http://${route.spec.host}/"
+            }
+        }
+
+
+        //return loadDeploymentConfigStatus(openshift, labels)
     }
 
     private Map loadDeploymentConfigStatus(OpenShiftDSL openshift, Map labels){
