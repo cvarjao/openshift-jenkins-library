@@ -317,12 +317,13 @@ class OpenShiftHelper {
 
         context['ENV_KEY_NAME'] = 'build'
         script.stash(name: 'openshift', includes:stashIncludes.join(','))
+        Map labels=['app-name': context.name, 'env-name': context.buildEnvName]
+
         openshift.withCluster() {
             openshift.withProject(openshift.project()) {
                 checkProjectsAccess(script, openshift, context)
 
                 script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out.tokenize()[0]}'"
-                Map labels=['app-name': context.name, 'env-name': context.buildEnvName]
                 def newObjects = loadObjectsFromTemplate(openshift, context.templates.build, context, 'build')
                 def currentObjects = loadObjectsByLabel(openshift, labels)
 
@@ -410,7 +411,8 @@ class OpenShiftHelper {
             }// enf withProject
         } // end withCluster
         new GitHubHelper().createCommitStatus(script, context.commitId, 'SUCCESS', "${script.env.BUILD_URL}", 'Build', 'continuous-integration/jenkins/build')
-
+        context.deployments = context.deployments?:[:]
+        context.deployments['build']=['projectName':context.build.projectName, 'labels':labels]
     }
 
     private def applyBuildConfig(CpsScript script, OpenShiftDSL openshift, String appName, String envName, Map models, Map currentModels) {
@@ -542,13 +544,13 @@ class OpenShiftHelper {
                 openshift.withCluster(){
                     openshift.withProject(deployment.projectName) {
                         def result=openshift.delete((['all'] + labelsToArgs(deployment.labels)) as String[])
-                        script.echo "Output: ${result}"
+                        script.echo "Output:\n${result.out}"
 
-                        def protectedSelector=openshift.selector('secret,configmap', context.labels)
+                        def protectedSelector=openshift.selector('secret,configmap', deployment.labels)
                         if (protectedSelector.count() > 0) {
                             script.echo "Deleting: ${protectedSelector.names()}"
                             result=openshift.delete((['secret,configmap'] + labelsToArgs(deployment.labels)) as String[])
-                            script.echo "Output: ${result}"
+                            script.echo "Output:\n${result.out}"
                         }
                     } // end withProject
                 } // end withCluster
