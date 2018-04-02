@@ -28,24 +28,31 @@ class GitHubHelper {
     }
 
     @NonCPS
-    static void mergeAndClosePullRequest(String repositoryUrl, int prNumber){
+    static boolean mergeAndClosePullRequest(String repositoryUrl, int prNumber){
         GHRepository repo=getGitHubRepository(repositoryUrl)
         GHPullRequest pullRequest = repo.getPullRequest(prNumber)
         Boolean mergeable = pullRequest.getMergeable()
+        boolean ret=true
 
         if (mergeable!=null && mergeable.booleanValue() == true){
             GHCommitPointer head=pullRequest.getHead()
             pullRequest.merge("Merged PR-${prNumber}", head.getSha(), GHPullRequest.MergeMethod.MERGE)
             if (head.getRef()!=null){
-                GHRef headRef=repo.getRef(head.getRef())
-                headRef.delete()
+                GHRef headRef=repo.getRef('heads/'+head.getRef())
+                if (headRef!=null) {
+                    headRef.delete()
+                }
             }
             pullRequest.close()
+        }else{
+            ret = false
         }
+
+        return ret
     }
 
-    static void mergeAndClosePullRequest(CpsScript script) {
-        mergeAndClosePullRequest(script.scm.getUserRemoteConfigs()[0].getUrl(), Integer.parseInt(script.env.CHANGE_ID))
+    static boolean mergeAndClosePullRequest(CpsScript script) {
+        return mergeAndClosePullRequest(script.scm.getUserRemoteConfigs()[0].getUrl(), Integer.parseInt(script.env.CHANGE_ID))
     }
 
     static GHDeploymentBuilder createDeployment(CpsScript script, String ref) {
