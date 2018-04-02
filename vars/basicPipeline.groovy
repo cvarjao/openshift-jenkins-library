@@ -32,6 +32,13 @@ def call(body) {
         echo "Pull-Request: ${pullRequest}"
         echo "Pull-Request: head.ref: ${pullRequest.getHead().getRef()}"
     }
+
+    stage('Cleanup') {
+        def inputResponse=input(id: 'close_pr', message: "Ready to Accept/Merge, and Close pull-request #${env.CHANGE_ID}?", ok: 'Yes', submitter: 'authenticated', submitterParameter: 'approver')
+        script.input "Merge, and Close PR?"
+        GitHubHelper.mergeAndClosePullRequest(this)
+    }
+
     stage('Build') {
         node('master') {
             checkout scm
@@ -61,10 +68,6 @@ def call(body) {
                 }
             }
         }
-    }
-    stage('Cleanup') {
-        def inputResponse=input(id: 'close_pr', message: "Ready to Accept/Merge, and Close pull-request #${env.CHANGE_ID}?", ok: 'Yes', submitter: 'authenticated', submitterParameter: 'approver')
-        script.input "Merge, and Close PR?"
     }
 
 }
