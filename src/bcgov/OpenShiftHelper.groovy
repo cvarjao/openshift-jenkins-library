@@ -263,12 +263,36 @@ class OpenShiftHelper {
 
     private void checkProjectsAccess(CpsScript script, OpenShiftDSL openshift, Map context){
         String currentUser= openshift.raw('whoami').out.tokenize()[0]
+        String currentProjectName= openshift.project()
+        String currentProjectBaseName = null
+
+        if (currentProjectName.endsWith('-tools')){
+            currentProjectBaseName=currentProjectName.substring(0, currentProjectName.length()-6)
+        }
+
+        script.echo "currentProjectBaseName: '${currentProjectBaseName}'"
+
+        Map modifiedEnvProjects=[:]
+
         script.waitUntil {
             boolean isReady = true
             List projects=[]
             List accessibleProjects=openshift.raw('projects', '-q').out.tokenize()
-            for(Map env: context.env.values()){
-                projects.add(env.project)
+            for(String envKeyName: context.env.keySet() as String[]){
+                Map env=context.env[envKeyName]
+                if (env.project!=null) {
+                    projects.add(env.project)
+                }else if (env.project == null && currentProjectBaseName!=null){
+                    if (accessibleProjects.contains("${currentProjectBaseName}-deploy")){
+                        modifiedEnvProjects[envKeyName]="${currentProjectBaseName}-deploy"
+                    }else{
+                        modifiedEnvProjects[envKeyName]="${currentProjectBaseName}-${envKeyName.toLowerCase()}"
+                    }
+                    projects.add(modifiedEnvProjects[envKeyName])
+                }else if (env.project == null){
+                    modifiedEnvProjects[envKeyName]="${currentProjectName}"
+                    projects.add(modifiedEnvProjects[envKeyName])
+                }
             }
 
             script.echo "Accessible Projects '${accessibleProjects}'"
@@ -287,6 +311,12 @@ class OpenShiftHelper {
 
             return isReady
         }
+
+        for(String envKeyName: modifiedEnvProjects.keySet() as String[]){
+            script.echo "Setting target project for '${envKeyName}' to '${modifiedEnvProjects[envKeyName]}' "
+            context.env[envKeyName].project=modifiedEnvProjects[envKeyName]
+        }
+        script.error "stop here"
     }
 
     def prepareForCD(CpsScript script, Map context) {
