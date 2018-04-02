@@ -32,20 +32,35 @@ class GitHubHelper {
         GHRepository repo=getGitHubRepository(repositoryUrl)
         GHPullRequest pullRequest = repo.getPullRequest(prNumber)
         Boolean mergeable = pullRequest.getMergeable()
-        boolean ret=true
+        GHIssueState state = pullRequest.getState()
+        boolean ret=false
+        boolean doClose=true;
 
-        if (mergeable!=null && mergeable.booleanValue() == true){
-            GHCommitPointer head=pullRequest.getHead()
-            pullRequest.merge("Merged PR-${prNumber}", head.getSha(), GHPullRequest.MergeMethod.MERGE)
-            if (head.getRef()!=null){
-                GHRef headRef=repo.getRef('heads/'+head.getRef())
-                if (headRef!=null) {
-                    headRef.delete()
+        if (state != GHIssueState.CLOSED) {
+            GHCommitPointer head = pullRequest.getHead()
+            if (!pullRequest.isMerged()) {
+                if (mergeable != null && mergeable.booleanValue() == true) {
+                    pullRequest.merge("Merged PR-${prNumber}", head.getSha(), GHPullRequest.MergeMethod.MERGE)
+                }else{
+                    doClose=false
                 }
             }
-            pullRequest.close()
+
+            if (head.getRef() != null) {
+                GHRef headRef = repo.getRef('heads/' + head.getRef())
+                if (headRef != null) {
+                    headRef.delete()
+                }else{
+                    doClose=false
+                }
+            }
+
+            if (doClose){
+                pullRequest.close()
+                ret = true
+            }
         }else{
-            ret = false
+            ret = true
         }
 
         return ret
