@@ -28,7 +28,9 @@ def call(body) {
     stage('Prepare') {
         abortAllPreviousBuildInProgress(currentBuild)
         echo "BRANCH_NAME=${env.BRANCH_NAME}\nCHANGE_ID=${env.CHANGE_ID}\nCHANGE_TARGET=${env.CHANGE_TARGET}\nBUILD_URL=${env.BUILD_URL}"
-        echo "Pull-Request: ${GitHubHelper.getPullRequest(this)}"
+        def pullRequest=GitHubHelper.getPullRequest(this)
+        echo "Pull-Request: ${pullRequest}"
+        echo "Pull-Request: head.ref: ${pullRequest.getHead().getRef()}"
     }
     stage('Build') {
         node('master') {
