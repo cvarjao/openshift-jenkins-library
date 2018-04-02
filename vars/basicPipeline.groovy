@@ -37,6 +37,7 @@ def call(body) {
         def inputResponse=input(id: 'close_pr', message: "Ready to Accept/Merge, and Close pull-request #${env.CHANGE_ID}?", ok: 'Yes', submitter: 'authenticated', submitterParameter: 'approver')
         script.input "Merge, and Close PR?"
         GitHubHelper.mergeAndClosePullRequest(this)
+        error "stop here"
     }
 
     stage('Build') {
