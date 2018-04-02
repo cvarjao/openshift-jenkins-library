@@ -705,6 +705,8 @@ class OpenShiftHelper {
         }
 
         List upserts=[]
+        List replaces=[]
+
         for (Map m : models.values()) {
             if ('ImageStream'.equalsIgnoreCase(m.kind)){
                 upserts.add(m)
@@ -724,12 +726,21 @@ class OpenShiftHelper {
         script.echo "Applying Configurations"
         upserts.clear()
         for (Map m : models.values()) {
-            Map current = initDeploymemtConfigStatus[key(m)]
-            if(allowCreateOrUpdate(m, current)){
-                upserts.add(m)
+            if ("Route".equalsIgnoreCase(m.kind)) {
+                replaces.add(m)
+            }else{
+                Map current = initDeploymemtConfigStatus[key(m)]
+                if (allowCreateOrUpdate(m, current)) {
+                    upserts.add(m)
+                }
             }
         }
         openshift.apply(upserts).label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
+
+        if (replaces.size()>0) {
+            openshift.apply(replaces, '--force=true').label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
+        }
+        
         waitForDeploymentsToComplete(script, openshift, labels)
 
         openshift.selector('route', labels).withEach {
