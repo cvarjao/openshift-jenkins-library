@@ -283,11 +283,20 @@ class OpenShiftHelper {
                 if (env.project!=null) {
                     projects.add(env.project)
                 }else if (env.project == null && currentProjectBaseName!=null){
-                    if (accessibleProjects.contains("${currentProjectBaseName}-deploy")){
-                        modifiedEnvProjects[envKeyName]="${currentProjectBaseName}-deploy"
-                    }else{
-                        modifiedEnvProjects[envKeyName]="${currentProjectBaseName}-${envKeyName.toLowerCase()}"
+                    String deployProjectName="${currentProjectBaseName}-deploy"
+                    String envProjectName="${currentProjectBaseName}-${envKeyName.toLowerCase()}"
+                    boolean deployProjectAccessible = accessibleProjects.contains(deployProjectName)
+                    boolean envProjectAccessible = accessibleProjects.contains(envProjectName)
+
+                    script.echo "deployProjectName:'${deployProjectName}' accessible:${deployProjectAccessible}"
+                    script.echo "envProjectName:'${envProjectName}' accessible:${envProjectAccessible}"
+
+                    if (envProjectAccessible){
+                        modifiedEnvProjects[envKeyName]=envProjectName
+                    }else if (deployProjectAccessible){
+                        modifiedEnvProjects[envKeyName]=deployProjectName
                     }
+
                     projects.add(modifiedEnvProjects[envKeyName])
                 }else if (env.project == null){
                     modifiedEnvProjects[envKeyName]="${currentProjectName}"
