@@ -32,15 +32,8 @@ def call(body) {
         abortAllPreviousBuildInProgress(currentBuild)
         echo "BRANCH_NAME=${env.BRANCH_NAME}\nCHANGE_ID=${env.CHANGE_ID}\nCHANGE_TARGET=${env.CHANGE_TARGET}\nBUILD_URL=${env.BUILD_URL}"
         def pullRequest=GitHubHelper.getPullRequest(this)
-        echo "Pull-Request: ${pullRequest}"
-        echo "Pull-Request: head.ref: ${pullRequest.getHead().getRef()}"
-    }
-
-    stage('Cleanup') {
-        def inputResponse=input(id: 'close_pr', message: "Ready to Accept/Merge, and Close pull-request #${env.CHANGE_ID}?", ok: 'Yes', submitter: 'authenticated', submitterParameter: 'approver')
-        echo "inputResponse:${inputResponse}"
-        GitHubHelper.mergeAndClosePullRequest(this)
-        error "stop here"
+        //echo "Pull-Request: ${pullRequest}"
+        //echo "Pull-Request: head.ref: ${pullRequest.getHead().getRef()}"
     }
 
     stage('Build') {
@@ -74,4 +67,9 @@ def call(body) {
         }
     }
 
+    stage('Cleanup') {
+        def inputResponse=input(id: 'close_pr', message: "Ready to Accept/Merge, and Close pull-request #${env.CHANGE_ID}?", ok: 'Yes', submitter: 'authenticated', submitterParameter: 'approver')
+        echo "inputResponse:${inputResponse}"
+        GitHubHelper.mergeAndClosePullRequest(this)
+    }
 }

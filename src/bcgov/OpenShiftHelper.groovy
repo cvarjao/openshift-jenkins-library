@@ -43,6 +43,10 @@ class OpenShiftHelper {
         }
         return false
     }
+    @NonCPS
+    private static String toJsonString(Object object) {
+        return groovy.json.JsonOutput.toJson(object)
+    }
 
     @NonCPS
     private List getTemplateParameters(String parameters) {
@@ -501,13 +505,16 @@ class OpenShiftHelper {
 
     private Map createDeployContext(CpsScript script, Map context, String envKeyName) {
         String envName = envKeyName.toLowerCase()
+        boolean transientEnv =false
         if ("DEV".equalsIgnoreCase(envKeyName)) {
             envName = "dev-pr-${script.env.CHANGE_ID}"
+            transientEnv=true
         }
         Map deployCfg = [
                 'envName':envName,
                 'projectName':context.env[envKeyName].project,
-                'envKeyName':envKeyName
+                'envKeyName':envKeyName,
+                'transient': transientEnv
         ]
 
         if (!deployCfg.dcPrefix) deployCfg.dcPrefix = context.name
@@ -524,10 +531,10 @@ class OpenShiftHelper {
         script.echo "Deploying to ${envKeyName.toUpperCase()} as ${deployCfg.envName}"
         //GitHubHelper.getPullRequest(script).getHead().getSha()
 
-        def ghDeploymentId = new GitHubHelper().createDeployment(script, context.commitId, ['environment':"${envKeyName.toUpperCase()}"])
+        def ghDeploymentId = new GitHubHelper().createDeployment(script, context.commitId, ['environment':"${envKeyName.toUpperCase()}", 'payload':toJsonString(deployCfg), 'task':"deploy:pull:${script.env.CHANGE_ID}"])
         deployCfg['ghDeploymentId'] = ghDeploymentId
 
-        new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'PENDING', ['targetUrl':"${script.env.BUILD_URL}console"])
+        new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'PENDING', ['targetUrl':"${script.env.BUILD_URL}"])
 
         new GitHubHelper().createCommitStatus(script, context.commitId, 'PENDING', "${script.env.BUILD_URL}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
 
@@ -554,7 +561,7 @@ class OpenShiftHelper {
                 //} // end openshift.withCredentials()
             } // end openshift.withCluster()
             context.remove('deploy')
-            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', ['targetUrl':"${script.env.BUILD_URL}console"])
+            new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', ['targetUrl':"${script.env.BUILD_URL}"])
             new GitHubHelper().createCommitStatus(script, context.commitId, 'SUCCESS', "${script.env.BUILD_URL}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
         //}catch (all) {
         //    new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'ERROR', [:])
