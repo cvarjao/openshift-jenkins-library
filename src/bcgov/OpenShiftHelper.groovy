@@ -593,7 +593,7 @@ class OpenShiftHelper {
                 //} // end openshift.withCredentials()
             } // end openshift.withCluster()
             context.remove('deploy')
-            context.deployments == context.deployments?:[]
+            context.deployments = context.deployments?:[]
             context.deployments[envKeyName]=deployCfg
             new GitHubHelper().createDeploymentStatus(script, ghDeploymentId, 'SUCCESS', ['targetUrl':"${deployCfg.logUrl}"])
             new GitHubHelper().createCommitStatus(script, context.commitId, 'SUCCESS', "${deployCfg.logUrl}", "Deployment to ${envKeyName.toUpperCase()}", "continuous-integration/jenkins/deployment/${envKeyName.toLowerCase()}")
