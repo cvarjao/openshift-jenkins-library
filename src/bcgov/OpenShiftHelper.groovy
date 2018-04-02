@@ -288,8 +288,8 @@ class OpenShiftHelper {
                     boolean deployProjectAccessible = accessibleProjects.contains(deployProjectName)
                     boolean envProjectAccessible = accessibleProjects.contains(envProjectName)
 
-                    script.echo "deployProjectName:'${deployProjectName}' accessible:${deployProjectAccessible}"
-                    script.echo "envProjectName:'${envProjectName}' accessible:${envProjectAccessible}"
+                    //script.echo "deployProjectName:'${deployProjectName}' accessible:${deployProjectAccessible}"
+                    //script.echo "envProjectName:'${envProjectName}' accessible:${envProjectAccessible}"
 
                     if (envProjectAccessible){
                         modifiedEnvProjects[envKeyName]=envProjectName
@@ -325,7 +325,7 @@ class OpenShiftHelper {
             script.echo "Setting target project for '${envKeyName}' to '${modifiedEnvProjects[envKeyName]}' "
             context.env[envKeyName].project=modifiedEnvProjects[envKeyName]
         }
-        script.error "stop here"
+        //script.error "stop here"
     }
 
     def prepareForCD(CpsScript script, Map context) {
