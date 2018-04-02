@@ -28,6 +28,7 @@ def call(body) {
     stage('Prepare') {
         abortAllPreviousBuildInProgress(currentBuild)
         echo "BRANCH_NAME=${env.BRANCH_NAME}\nCHANGE_ID=${env.CHANGE_ID}\nCHANGE_TARGET=${env.CHANGE_TARGET}\nBUILD_URL=${env.BUILD_URL}"
+        echo "Pull-Request: ${GitHubHelper.getPullRequest(this)}"
     }
     stage('Build') {
         node('master') {
@@ -59,6 +60,9 @@ def call(body) {
             }
         }
     }
-    stage('Cleanup') { }
+    stage('Cleanup') {
+        def inputResponse=input(id: 'close_pr', message: "Ready to Accept/Merge, and Close pull-request #${env.CHANGE_ID}?", ok: 'Yes', submitter: 'authenticated', submitterParameter: 'approver')
+        script.input "Merge, and Close PR?"
+    }
 
 }

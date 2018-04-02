@@ -19,12 +19,33 @@ class GitHubHelper {
         return GitHubRepositoryName.create(url).resolveOne()
     }
 
-    static GHRepository getPullRequest(CpsScript script){
+    static GHPullRequest getPullRequest(CpsScript script){
         return getGitHubRepository(script).getPullRequest(Integer.parseInt(script.env.CHANGE_ID))
     }
 
-    static GHRepository getPullRequestLastCommitId(CpsScript script){
+    static String getPullRequestLastCommitId(CpsScript script){
         return getPullRequest(script).getHead().getSha()
+    }
+
+    @NonCPS
+    static void mergeAndClosePullRequest(String repositoryUrl, int prNumber){
+        GHRepository repo=getGitHubRepository(repositoryUrl)
+        GHPullRequest pullRequest = repo.getPullRequest(prNumber)
+        Boolean mergeable = pullRequest.getMergeable()
+
+        if (mergeable!=null && mergeable.booleanValue() == true){
+            GHCommitPointer head=pullRequest.getHead()
+            pullRequest.merge("Merged PR-${prNumber}", head.getSha(), GHPullRequest.MergeMethod.MERGE)
+            if (head.getRef()!=null){
+                GHRef headRef=repo.getRef(head.getRef())
+                headRef.delete()
+            }
+            pullRequest.close()
+        }
+    }
+
+    static void mergeAndClosePullRequest(CpsScript script) {
+        mergeAndClosePullRequest(script.scm.getUserRemoteConfigs()[0].getUrl(), Integer.parseInt(script.env.CHANGE_ID))
     }
 
     static GHDeploymentBuilder createDeployment(CpsScript script, String ref) {
