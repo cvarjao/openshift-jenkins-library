@@ -412,7 +412,7 @@ class OpenShiftHelper {
         } // end withCluster
         new GitHubHelper().createCommitStatus(script, context.commitId, 'SUCCESS', "${script.env.BUILD_URL}", 'Build', 'continuous-integration/jenkins/build')
         context.deployments = context.deployments?:[:]
-        context.deployments['build']=['projectName':context.build.projectName, 'labels':labels]
+        context.deployments['build']=['projectName':context.build.projectName, 'labels':labels, 'transient':true]
     }
 
     private def applyBuildConfig(CpsScript script, OpenShiftDSL openshift, String appName, String envName, Map models, Map currentModels) {
