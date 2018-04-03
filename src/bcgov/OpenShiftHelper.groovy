@@ -539,8 +539,8 @@ class OpenShiftHelper {
 
         script.waitUntil {
             boolean isReady=false
+            List errors = []
             try {
-                List errors = []
                 Map deployCfg = context.deploy
                 openshift.withCluster() {
                     openshift.withProject(deployCfg.projectName) {
@@ -566,6 +566,9 @@ class OpenShiftHelper {
             }
 
             if (!isReady){
+                for (String err:errors){
+                    script.echo "${err}"
+                }
                 script.input "Retry Environment Readiness Check?"
             }
         }
