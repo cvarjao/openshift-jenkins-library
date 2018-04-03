@@ -796,7 +796,7 @@ class OpenShiftHelper {
         openshift.apply(upserts).label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
 
         if (replaces.size()>0) {
-            openshift.apply(replaces, '--force=true').label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
+            openshift.replace(replaces, '--force=true').label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
         }
 
         waitForDeploymentsToComplete(script, openshift, labels)
