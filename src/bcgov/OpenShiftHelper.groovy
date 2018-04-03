@@ -772,8 +772,8 @@ class OpenShiftHelper {
         for (Map m : models.values()) {
             if ("Route".equalsIgnoreCase(m.kind)) {
                 String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+".${deployCtx.envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
-                script.echo "Applying TLS using secret/${secretName} for '${key(m)}'"
                 if (secretName!=null){
+                    script.echo "Applying TLS using secret/${secretName} for '${key(m)}'"
                     m.tls = m.tls?:[:]
                     def selector=openshift.selector("secrets/${secretName}")
                     if (selector.count() == 1){
@@ -796,13 +796,19 @@ class OpenShiftHelper {
         openshift.apply(upserts).label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
 
         if (replaces.size()>0) {
-            openshift.verbose(true)
-            def replaceSelector=openshift.replace(replaces, '--force=true')
-            replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
+            def replaceSelector
+            //openshift.verbose(true)
+            //def replaceSelector=openshift.replace(replaces, '--force=true')
+            //replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
 
-            openshift.verbose(false)
-            script.echo "replaced ${replaceSelector.names()}"
-            openshift.delete(replaceSelector.names())
+            //openshift.verbose(false)
+            //script.echo "replaced ${replaceSelector.names()}"
+            //openshift.delete(replaceSelector.names())
+            List names=[]
+            for (Map m:replaces){
+                names.add(key(m))
+            }
+            openshift.delete(names)
             replaceSelector=openshift.create(replaces)
             replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
         }
