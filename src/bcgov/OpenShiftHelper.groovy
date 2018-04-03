@@ -573,7 +573,7 @@ class OpenShiftHelper {
                 }
                 script.input "Retry Environment Readiness Check?"
             }
-            
+
             return isReady
         }
 
@@ -772,11 +772,12 @@ class OpenShiftHelper {
         for (Map m : models.values()) {
             if ("Route".equalsIgnoreCase(m.kind)) {
                 String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+".${deployCtx.envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
-
+                script.echo "Applying TLS using secret/${secretName} for '${key(m)}'"
                 if (secretName!=null){
                     m.tls = m.tls?:[:]
                     def selector=openshift.selector("secrets/${secretName}")
                     if (selector.count() == 1){
+                        script.echo "Modifying '${key(m)}'"
                         Map secret=selector.object()
                         m.tls.caCertificate=new String(secret.data.caCertificate.decodeBase64())
                         m.tls.certificate=new String(secret.data.certificate.decodeBase64())
