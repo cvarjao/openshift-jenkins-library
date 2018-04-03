@@ -796,41 +796,7 @@ class OpenShiftHelper {
         openshift.apply(upserts).label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
 
         if (replaces.size()>0) {
-            //def replaceSelector
-            script.echo "${toJsonString(replaces)}"
             openshift.apply(replaces, '--force=true').label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
-
-            //openshift.verbose(true)
-            //def replaceSelector=openshift.replace(replaces, '--force=true')
-            //replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
-
-            //openshift.verbose(false)
-            //script.echo "replaced ${replaceSelector.names()}"
-            //openshift.delete(replaceSelector.names())
-            /*
-            List names=[]
-            for (Map m:replaces){
-                names.add(key(m))
-            }
-            */
-            /*
-            List deleteNames=[]
-            openshift.selector(names).withEach {
-                if (it.exists()) {
-                    deleteNames.add(it.name())
-                }
-            }
-
-            if (deleteNames.size()>0) {
-                openshift.delete(deleteNames)
-            }
-            */
-            /*
-
-            openshift.selector(names).delete('--ignore-not-found=true')
-            replaceSelector=openshift.create(replaces)
-            replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
-            */
         }
 
         waitForDeploymentsToComplete(script, openshift, labels)
