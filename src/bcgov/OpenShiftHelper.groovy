@@ -573,6 +573,8 @@ class OpenShiftHelper {
                 }
                 script.input "Retry Environment Readiness Check?"
             }
+            
+            return isReady
         }
 
         clearDeploymentContext(script, openshift, context, envKeyName)
