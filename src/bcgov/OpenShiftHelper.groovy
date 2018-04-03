@@ -804,19 +804,24 @@ class OpenShiftHelper {
             //openshift.verbose(false)
             //script.echo "replaced ${replaceSelector.names()}"
             //openshift.delete(replaceSelector.names())
+
             List names=[]
             for (Map m:replaces){
                 names.add(key(m))
             }
+            /*
             List deleteNames=[]
             openshift.selector(names).withEach {
-                deleteNames.add(it.name())
+                if (it.exists()) {
+                    deleteNames.add(it.name())
+                }
             }
-            
+
             if (deleteNames.size()>0) {
                 openshift.delete(deleteNames)
             }
-
+            */
+            openshift.selector(names).delete('--ignore-not-found=true')
             replaceSelector=openshift.create(replaces)
             replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
         }
