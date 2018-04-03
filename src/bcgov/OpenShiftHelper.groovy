@@ -548,7 +548,7 @@ class OpenShiftHelper {
 
                         for (Map m : models.values()) {
                             if ("Route".equalsIgnoreCase(m.kind)) {
-                                String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+"/${envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
+                                String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+".${envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
 
                                 if (secretName!=null) {
                                     def selector = openshift.selector("secrets/${secretName}")
@@ -769,7 +769,7 @@ class OpenShiftHelper {
         upserts.clear()
         for (Map m : models.values()) {
             if ("Route".equalsIgnoreCase(m.kind)) {
-                String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+"/${deployCtx.envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
+                String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+".${deployCtx.envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
 
                 if (secretName!=null){
                     m.tls = m.tls?:[:]
