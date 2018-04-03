@@ -541,20 +541,25 @@ class OpenShiftHelper {
             boolean isReady=false
             try {
                 Map deployCfg = context.deploy
-                Map models = loadObjectsFromTemplate(openshift, context.templates.deployment, context,'deployment')
-                List errors=[]
+                openshift.withCluster() {
+                    openshift.withProject(deployCfg.projectName) {
+                        Map models = loadObjectsFromTemplate(openshift, context.templates.deployment, context, 'deployment')
+                        List errors = []
 
-                for (Map m : models.values()) {
-                    if ("Route".equalsIgnoreCase(m.kind)) {
-                        if (m.metadata?.annotations && m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]){
-                            m.tls = m.tls?:[:]
-                            def selector=openshift.selector("secrets/${m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]}")
-                            if (selector.count() == 0){
-                                errors.add("Missing 'secret/${m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]}'")
+                        for (Map m : models.values()) {
+                            if ("Route".equalsIgnoreCase(m.kind)) {
+                                if (m.metadata?.annotations && m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]) {
+                                    m.tls = m.tls ?: [:]
+                                    def selector = openshift.selector("secrets/${m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]}")
+                                    if (selector.count() == 0) {
+                                        errors.add("Missing 'secret/${m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]}'")
+                                    }
+                                }
                             }
                         }
-                    }
-                }
+
+                    } //end withProject
+                } // end withCluster
                 isReady = errors.size() == 0
             } catch (ex) {
                 script.echo "Error: ${ex}"
