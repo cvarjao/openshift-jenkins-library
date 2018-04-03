@@ -774,14 +774,14 @@ class OpenShiftHelper {
                 String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+".${deployCtx.envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
                 if (secretName!=null){
                     script.echo "Applying TLS using secret/${secretName} for '${key(m)}'"
-                    m.tls = m.tls?:[:]
+                    m.spec.tls = m.spec.tls?:[:]
                     def selector=openshift.selector("secrets/${secretName}")
                     if (selector.count() == 1){
                         script.echo "Modifying '${key(m)}'"
                         Map secret=selector.object()
-                        m.tls.caCertificate=new String(secret.data.caCertificate.decodeBase64())
-                        m.tls.certificate=new String(secret.data.certificate.decodeBase64())
-                        m.tls.key=new String(secret.data.key.decodeBase64())
+                        m.spec.tls.caCertificate=new String(secret.data.caCertificate.decodeBase64())
+                        m.spec.tls.certificate=new String(secret.data.certificate.decodeBase64())
+                        m.spec.tls.key=new String(secret.data.key.decodeBase64())
                     }
                 }
 
@@ -796,7 +796,10 @@ class OpenShiftHelper {
         openshift.apply(upserts).label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
 
         if (replaces.size()>0) {
-            def replaceSelector
+            //def replaceSelector
+            script.echo "${toJsonString(replaces)}"
+            openshift.apply(replaces, '--force=true')
+
             //openshift.verbose(true)
             //def replaceSelector=openshift.replace(replaces, '--force=true')
             //replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
@@ -804,11 +807,12 @@ class OpenShiftHelper {
             //openshift.verbose(false)
             //script.echo "replaced ${replaceSelector.names()}"
             //openshift.delete(replaceSelector.names())
-
+            /*
             List names=[]
             for (Map m:replaces){
                 names.add(key(m))
             }
+            */
             /*
             List deleteNames=[]
             openshift.selector(names).withEach {
@@ -821,11 +825,12 @@ class OpenShiftHelper {
                 openshift.delete(deleteNames)
             }
             */
+            /*
 
-            script.echo "${toJsonString(replaces)}"
             openshift.selector(names).delete('--ignore-not-found=true')
             replaceSelector=openshift.create(replaces)
             replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
+            */
         }
 
         waitForDeploymentsToComplete(script, openshift, labels)
