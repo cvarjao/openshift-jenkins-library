@@ -798,7 +798,7 @@ class OpenShiftHelper {
         if (replaces.size()>0) {
             //def replaceSelector
             script.echo "${toJsonString(replaces)}"
-            openshift.apply(replaces, '--force=true')
+            openshift.apply(replaces, '--force=true').label(['app':"${labels['app-name']}-${labels['env-name']}", 'app-name':labels['app-name'], 'env-name':labels['env-name']], "--overwrite")
 
             //openshift.verbose(true)
             //def replaceSelector=openshift.replace(replaces, '--force=true')
