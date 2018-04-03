@@ -808,7 +808,15 @@ class OpenShiftHelper {
             for (Map m:replaces){
                 names.add(key(m))
             }
-            openshift.selector(names).delete()
+            List deleteNames=[]
+            openshift.selector(names).withEach {
+                deleteNames.add(it.name())
+            }
+            
+            if (deleteNames.size()>0) {
+                openshift.delete(deleteNames)
+            }
+
             replaceSelector=openshift.create(replaces)
             replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
         }
