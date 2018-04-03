@@ -6,6 +6,7 @@ import com.openshift.jenkins.plugins.OpenShiftDSL;
 class OpenShiftHelper {
     int logLevel=0
     static List PROTECTED_TYPES = ['Secret', 'ConfigMap', 'PersistentVolumeClaim']
+    static String ANNOTATION_ROUTE_TLS_SECRET_NAME='template.openshift.io.bcgov/tls-secret-name'
     static String ANNOTATION_ALLOW_CREATE='template.openshift.io.bcgov/create'
     static String ANNOTATION_ALLOW_UPDATE='template.openshift.io.bcgov/update'
 
@@ -533,17 +534,51 @@ class OpenShiftHelper {
 
     void waitUntilEnvironmentIsReady(CpsScript script, Map context, String envKeyName){
         OpenShiftDSL openshift=script.openshift
+        script.unstash(name: 'openshift')
+        initializeDeploymentContext(script, openshift, context, envKeyName)
+
         script.waitUntil {
+            boolean isReady=false
             try {
-                Map deployCfg = createDeployContext(script, context, envKeyName)
-                return true
+                Map deployCfg = context.deploy
+                Map models = loadObjectsFromTemplate(openshift, context.templates.deployment, context,'deployment')
+                List errors=[]
+
+                for (Map m : models.values()) {
+                    if ("Route".equalsIgnoreCase(m.kind)) {
+                        if (m.metadata?.annotations && m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]){
+                            m.tls = m.tls?:[:]
+                            def selector=openshift.selector("secrets/${m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]}")
+                            if (selector.count() == 0){
+                                errors.add("Missing 'secret/${m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]}'")
+                            }
+                        }
+                    }
+                }
+                isReady= errors.size() == 0
             } catch (ex) {
+                script.echo "Error: ${ex}"
+                isReady false
+            }
+
+            if (!isReady){
                 script.input "Retry Environment Readiness Check?"
-                return false
             }
         }
+
+        clearDeploymentContext(script, openshift, context, envKeyName)
     }
 
+    private void initializeDeploymentContext(CpsScript script, OpenShiftDSL openshift, Map context, String envKeyName) {
+        Map deployCfg = createDeployContext(script, context, envKeyName)
+        context['deploy'] = deployCfg
+        context['DEPLOY_ENV_NAME'] = envKeyName
+    }
+
+    private void clearDeploymentContext(CpsScript script, OpenShiftDSL openshift, Map context, String envKeyName) {
+        context.remove('deploy')
+        context.remove('DEPLOY_ENV_NAME')
+    }
     private Map createDeployContext(CpsScript script, Map context, String envKeyName) {
         String envName = envKeyName.toLowerCase()
         boolean transientEnv =false
@@ -599,8 +634,9 @@ class OpenShiftHelper {
 
     void deploy(CpsScript script, Map context, String envKeyName) {
         OpenShiftDSL openshift=script.openshift
-        Map deployCfg = createDeployContext(script, context, envKeyName)
-        context['deploy'] = deployCfg
+        initializeDeploymentContext(script, openshift, context, envKeyName)
+
+        Map deployCfg = context.deploy
         script.echo "Deploying to ${envKeyName.toUpperCase()} as ${deployCfg.envName}"
         //GitHubHelper.getPullRequest(script).getHead().getSha()
 
@@ -616,9 +652,6 @@ class OpenShiftHelper {
             //GitHubHelper.getPullRequest(script).comment("Deploying to DEV")
 
             script.unstash(name: 'openshift')
-
-            context['DEPLOY_ENV_NAME'] = envKeyName
-
             script.echo "Deploying '${context.name}' to '${context.deploy.envName}'"
             openshift.withCluster() {
                 script.echo "Connected to project '${openshift.project()}' as user '${openshift.raw('whoami').out}'"
@@ -727,6 +760,20 @@ class OpenShiftHelper {
         upserts.clear()
         for (Map m : models.values()) {
             if ("Route".equalsIgnoreCase(m.kind)) {
+                if (m.metadata?.annotations && m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]){
+                    m.tls = m.tls?:[:]
+                    def selector=openshift.selector("secrets/${m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]}")
+                    if (selector.count() == 1){
+                        Map secret=selector.object()
+                        m.tls.caCertificate=new String(secret.data.caCertificate.decodeBase64())
+                        m.tls.certificate=new String(secret.data.certificate.decodeBase64())
+                        m.tls.key=new String(secret.data.key.decodeBase64())
+                    }
+                    //TODO: fetch certificate from Secret
+                    //tls.crt
+                    //tls-ca.crt
+                    //tls.key
+                }
                 replaces.add(m)
             }else{
                 Map current = initDeploymemtConfigStatus[key(m)]
@@ -740,7 +787,7 @@ class OpenShiftHelper {
         if (replaces.size()>0) {
             openshift.apply(replaces, '--force=true').label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
         }
-        
+
         waitForDeploymentsToComplete(script, openshift, labels)
 
         openshift.selector('route', labels).withEach {
