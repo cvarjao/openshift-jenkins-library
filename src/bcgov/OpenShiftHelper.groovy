@@ -548,10 +548,12 @@ class OpenShiftHelper {
 
                         for (Map m : models.values()) {
                             if ("Route".equalsIgnoreCase(m.kind)) {
-                                if (m.metadata?.annotations && m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]) {
-                                    def selector = openshift.selector("secrets/${m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]}")
+                                String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+"/${envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
+
+                                if (secretName!=null) {
+                                    def selector = openshift.selector("secrets/${secretName}")
                                     if (selector.count() == 0) {
-                                        errors.add("Missing 'secret/${m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]}'")
+                                        errors.add("Missing 'secret/${secretName}'")
                                     }
                                 }
                             }
@@ -767,20 +769,19 @@ class OpenShiftHelper {
         upserts.clear()
         for (Map m : models.values()) {
             if ("Route".equalsIgnoreCase(m.kind)) {
-                if (m.metadata?.annotations && m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]){
+                String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+"/${envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
+
+                if (secretName!=null){
                     m.tls = m.tls?:[:]
-                    def selector=openshift.selector("secrets/${m.metadata.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME]}")
+                    def selector=openshift.selector("secrets/${secretName}")
                     if (selector.count() == 1){
                         Map secret=selector.object()
                         m.tls.caCertificate=new String(secret.data.caCertificate.decodeBase64())
                         m.tls.certificate=new String(secret.data.certificate.decodeBase64())
                         m.tls.key=new String(secret.data.key.decodeBase64())
                     }
-                    //TODO: fetch certificate from Secret
-                    //tls.crt
-                    //tls-ca.crt
-                    //tls.key
                 }
+                
                 replaces.add(m)
             }else{
                 Map current = initDeploymemtConfigStatus[key(m)]
