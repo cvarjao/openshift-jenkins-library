@@ -797,8 +797,14 @@ class OpenShiftHelper {
 
         if (replaces.size()>0) {
             openshift.verbose(true)
-            openshift.replace(replaces, '--force=true').label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
+            def replaceSelector=openshift.replace(replaces, '--force=true')
+            replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
+
             openshift.verbose(false)
+            script.echo "replaced ${replaceSelector.names()}"
+            openshift.delete(replaceSelector.names())
+            replaceSelector=openshift.create(replaces)
+            replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
         }
 
         waitForDeploymentsToComplete(script, openshift, labels)
