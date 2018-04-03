@@ -821,6 +821,8 @@ class OpenShiftHelper {
                 openshift.delete(deleteNames)
             }
             */
+
+            script.echo "${replaces}"
             openshift.selector(names).delete('--ignore-not-found=true')
             replaceSelector=openshift.create(replaces)
             replaceSelector.label(['app': "${labels['app-name']}-${labels['env-name']}", 'app-name': labels['app-name'], 'env-name': labels['env-name']], "--overwrite")
