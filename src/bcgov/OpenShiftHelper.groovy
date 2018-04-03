@@ -555,10 +555,10 @@ class OpenShiftHelper {
                         }
                     }
                 }
-                isReady= errors.size() == 0
+                isReady = errors.size() == 0
             } catch (ex) {
                 script.echo "Error: ${ex}"
-                isReady false
+                isReady = false
             }
 
             if (!isReady){
