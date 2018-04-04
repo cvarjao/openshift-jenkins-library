@@ -22,7 +22,7 @@ class OpenShiftHelper {
 
         if (metadata.isPullRequest){
             metadata.pullRequestNumber=script.env.CHANGE_ID
-            metadata.gitBranchRemoteRef="refs/pull/${metadata.pullRequestNumber}/head";
+            metadata.gitBranchRemoteRef = script.sh(returnStdout: true, script: "git ls-remote origin 'refs/pull/${script.env.CHANGE_ID}/*' | grep '${metadata.commitId}' | cut -f2").trim()
             metadata.buildEnvName="pr-${metadata.pullRequestNumber}"
         }
 
@@ -144,6 +144,7 @@ class OpenShiftHelper {
                 buildOutput[buildName] = [
                         'kind': build.kind,
                         'metadata': ['name':build.metadata.name],
+                        'spec': [ 'revision':build.spec.revision ],
                         'output': [
                                 'to': [
                                         'kind': build.spec.output.to.kind,
@@ -243,8 +244,8 @@ class OpenShiftHelper {
                 boolean allDone = true
                 it.withEach { item ->
                     def object = item.object()
-                    script.echo "${key(object)} - ${object.status.phase}"
                     if (!isBuildComplete(object)) {
+                        script.echo "${key(object)} - ${object.status.phase}"
                         allDone = false
                     }
                 }
@@ -387,9 +388,10 @@ class OpenShiftHelper {
                         if (m.spec.source.git.ref) m.metadata.annotations['source/spec.source.git.ref']=m.spec.source.git.ref
 
                         m.metadata.annotations['spec.source.git.ref']=commitId
-                        m.spec.source.git.ref=commitId
+                        //m.spec.source.git.ref=commitId
+                        m.spec.source.git.ref=context.gitBranchRemoteRef
                         m.spec.runPolicy = 'SerialLatestOnly'
-                        script.echo "${key(m)} - ${contextDir?:'/'} @ ${m.spec.source.git.ref}"
+                        script.echo "${key(m)} - ${contextDir?:'/'} @ ${m.spec.source.git.ref}  (${commitId})"
                     }
                 }
 
@@ -397,22 +399,67 @@ class OpenShiftHelper {
 
                 applyBuildConfig(script, openshift, context.name, context.buildEnvName, newObjects, currentObjects);
                 script.echo "Waiting for builds to complete"
-
                 waitForBuildsToComplete(script, openshift, labels)
                 def startedNewBuilds=false
-
                 def postBuildConfigState=loadBuildConfigStatus(openshift, labels)
+
+                for (Map item: postBuildConfigState.values()){
+                    if ('BuildConfig'.equalsIgnoreCase(item.kind)){
+                        String lastBuildName="Build/${item.metadata.name}-${item.status.lastVersion}"
+                        Map lastBuild=postBuildConfigState[lastBuildName]
+                        script.echo "Analyzing if ${key(item)} needs a new build (last build is '${lastBuildName}')"
+                        if (lastBuild !=null) {
+                            script.echo "   Based on ${key(lastBuild)} with status ${lastBuild.status.phase}"
+                        }else{
+                            script.echo "   Based on last build not found"
+                        }
+                        def newBuild=null;
+                        if (lastBuild == null) {
+                            script.echo "   Starting a new build because none was found"
+                            newBuild = openshift.selector(key(item)).startBuild()
+                        }else if (lastBuild != null && !isBuildSuccesful(lastBuild)){
+                            script.echo "   Starting a new build because the last one (${key(lastBuild)}) was not successful (${lastBuild.status.phase})"
+                            newBuild = openshift.selector(key(item)).startBuild()
+                        }else{
+                            Map m=newObjects[key(item)]
+                            String newestCommit=m.metadata.annotations['spec.source.git.ref']
+                            String oldestCommit=lastBuild.spec.revision.git.commit
+                            if (!newestCommit.equalsIgnoreCase(oldestCommit)) {
+                                //git rev-list [newer] ^[older] --count
+                                int distance = Integer.parseInt(script.sh(returnStdout: true, script: "git rev-list ${newestCommit} ^${oldestCommit} --count").trim())
+                                script.echo "${distance} commits between ${oldestCommit} (oldest)  and ${newestCommit} (newest)"
+                                if (distance > 0) {
+                                    script.echo "   Starting a new build because the last one (${key(lastBuild)}) was outdated"
+                                    newBuild=openshift.selector(key(item)).startBuild()
+                                    startedNewBuilds = true
+                                }
+                            }
+                            //git rev-list e71492589b94239576a6397997c29e6cb5b55fc8 ^e71492589b94239576a6397997c29e6cb5b55fc8 --count
+                        }
+                        if (newBuild!=null){
+                            startedNewBuilds = true
+                            script.echo "New build started - ${newBuild.name()}"
+                        }
+                    }
+                }
+                /*
                 for (Map item: initialBuildConfigState.values()){
                     //script.echo "${item}"
                     if ('BuildConfig'.equalsIgnoreCase(item.kind)){
                         Map newItem=postBuildConfigState[key(item)]
                         Map build=initialBuildConfigState["Build/${item.metadata.name}-${item.status.lastVersion}"]
-                        if (item.status.lastVersion == newItem.status.lastVersion && !isBuildSuccesful(build)){
+
+                        if (item.status.lastVersion == newItem.status.lastVersion && (build==null || !isBuildSuccesful(build))){
                             openshift.selector(key(item)).startBuild()
                             startedNewBuilds=true
+                        }else if(build!=null){
+                            //git rev-list [newer] ^[older] --count
+                            //git rev-list e71492589b94239576a6397997c29e6cb5b55fc8 ^e71492589b94239576a6397997c29e6cb5b55fc8 --count
                         }
+
                     }
                 }
+                */
 
                 if (startedNewBuilds) {
                     waitForBuildsToComplete(script, openshift, labels)
