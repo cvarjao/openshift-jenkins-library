@@ -38,21 +38,22 @@ class GitHubHelper {
 
         if (state != GHIssueState.CLOSED) {
             GHCommitPointer head = pullRequest.getHead()
-            if (!pullRequest.isMerged()) {
-                if (mergeable != null && mergeable.booleanValue() == true) {
-                    pullRequest.merge("Merged PR-${prNumber}", head.getSha(), GHPullRequest.MergeMethod.MERGE)
-                }else{
-                    doClose=false
+            if (pullRequest.getRepository().getFullName().equalsIgnoreCase(head.getRepository().getFullName())) {
+                if (!pullRequest.isMerged()) {
+                    if (mergeable != null && mergeable.booleanValue() == true) {
+                        pullRequest.merge("Merged PR-${prNumber}", head.getSha(), GHPullRequest.MergeMethod.MERGE)
+                    } else {
+                        doClose = false
+                    }
+                }
+
+                if (head.getRef() != null) {
+                    GHRef headRef = repo.getRef('heads/' + head.getRef())
+                    if (headRef != null) {
+                        headRef.delete()
+                    }
                 }
             }
-
-            if (head.getRef() != null) {
-                GHRef headRef = repo.getRef('heads/' + head.getRef())
-                if (headRef != null) {
-                    headRef.delete()
-                }
-            }
-
             if (doClose){
                 pullRequest.close()
                 ret = true
