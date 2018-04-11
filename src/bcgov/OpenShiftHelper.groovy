@@ -593,7 +593,8 @@ class OpenShiftHelper {
 
                         for (Map m : models.values()) {
                             Map annotations=m?.metadata?.annotations?:[:]
-
+                            script.echo "Checking '${key(m)}'"
+                            script.echo "  annotations:${annotations}"
                             if ("Route".equalsIgnoreCase(m.kind)) {
                                 String secretName=(annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+".${envKeyName}"])?:(annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
 
@@ -604,7 +605,7 @@ class OpenShiftHelper {
                                     }
                                 }
                             }else if ("Secret".equalsIgnoreCase(m.kind)) {
-                                String sourceName=(annotations[ANNOTATION_AS_COPY_OF+".${envKeyName}"])?:(annotations[ANNOTATION_AS_COPY_OF])
+                                String sourceName=annotations[ANNOTATION_AS_COPY_OF+".${envKeyName}"]?:annotations[ANNOTATION_AS_COPY_OF]
                                 if (sourceName!=null){
                                     def selector = openshift.selector("secrets/${sourceName}")
                                     if (selector.count() == 0) {
@@ -843,7 +844,7 @@ class OpenShiftHelper {
 
                 replaces.add(m)
             }else{
-                String sourceName=(annotations[ANNOTATION_AS_COPY_OF+".${deployCtx.envKeyName}"])?:(annotations[ANNOTATION_AS_COPY_OF])
+                String sourceName=annotations[ANNOTATION_AS_COPY_OF+".${deployCtx.envKeyName}"]?:annotations[ANNOTATION_AS_COPY_OF]
                 if (sourceName!=null && sourceName.length()>0) {
                     script.echo "Creating a copy of '${sourceName}' as '${key(m)}'"
                     def selector = openshift.selector("secrets/${sourceName}")
