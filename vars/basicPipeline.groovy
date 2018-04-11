@@ -59,6 +59,7 @@ def call(body) {
         if (!"DEV".equalsIgnoreCase(stageDeployName) && "master".equalsIgnoreCase(env.CHANGE_TARGET)){
             stage("Approve - ${stageDeployName}") {
                 def inputResponse = input(id: "deploy_${stageDeployName.toLowerCase()}", message: "Deploy to ${stageDeployName}?", ok: 'Approve', submitterParameter: 'approved_by')
+                echo "inputResponse:${inputResponse}"
                 GitHubHelper.getPullRequest(this).comment("User '${inputResponse['approved_by']}' has approved deployment to '${stageDeployName}'")
             }
         }
