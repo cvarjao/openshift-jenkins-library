@@ -291,10 +291,10 @@ class OpenShiftHelper {
                     script.echo "deployProjectName:'${deployProjectName}' accessible:${deployProjectAccessible}"
                     script.echo "envProjectName:'${envProjectName}' accessible:${envProjectAccessible}"
 
-                    if (envProjectAccessible){
-                        modifiedEnvProjects[envKeyName]=envProjectName
-                    }else if (deployProjectAccessible){
+                    if (deployProjectAccessible){
                         modifiedEnvProjects[envKeyName]=deployProjectName
+                    }else{
+                        modifiedEnvProjects[envKeyName]=envProjectName
                     }
 
                     projects.add(modifiedEnvProjects[envKeyName])
