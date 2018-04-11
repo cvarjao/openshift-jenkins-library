@@ -47,12 +47,16 @@ def call(body) {
     }
     for(String envKeyName: context.env.keySet() as String[]){
         String stageDeployName=envKeyName.toUpperCase()
-        if (!"DEV".equalsIgnoreCase(stageDeployName) && "master".equalsIgnoreCase(env.CHANGE_TARGET)){
+
+        if ("DEV".equalsIgnoreCase(stageDeployName) || "master".equalsIgnoreCase(env.CHANGE_TARGET)) {
             stage("Readiness - ${stageDeployName}") {
                 node('master') {
                     new OpenShiftHelper().waitUntilEnvironmentIsReady(this, context, envKeyName)
                 }
             }
+        }
+
+        if (!"DEV".equalsIgnoreCase(stageDeployName) && "master".equalsIgnoreCase(env.CHANGE_TARGET)){
             stage("Approve - ${stageDeployName}") {
                 input id: "deploy_${stageDeployName.toLowerCase()}", message: "Deploy to ${stageDeployName}?", ok: 'Approve', submitterParameter: 'approved_by'
             }
