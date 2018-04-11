@@ -31,7 +31,7 @@ def call(body) {
     stage('Prepare') {
         abortAllPreviousBuildInProgress(currentBuild)
         echo "BRANCH_NAME=${env.BRANCH_NAME}\nCHANGE_ID=${env.CHANGE_ID}\nCHANGE_TARGET=${env.CHANGE_TARGET}\nBUILD_URL=${env.BUILD_URL}"
-        def pullRequest=GitHubHelper.getPullRequest(this)
+        //def pullRequest=GitHubHelper.getPullRequest(this)
         //echo "Pull-Request: ${pullRequest}"
         //echo "Pull-Request: head.ref: ${pullRequest.getHead().getRef()}"
     }
@@ -58,7 +58,8 @@ def call(body) {
 
         if (!"DEV".equalsIgnoreCase(stageDeployName) && "master".equalsIgnoreCase(env.CHANGE_TARGET)){
             stage("Approve - ${stageDeployName}") {
-                input id: "deploy_${stageDeployName.toLowerCase()}", message: "Deploy to ${stageDeployName}?", ok: 'Approve', submitterParameter: 'approved_by'
+                def inputResponse = input(id: "deploy_${stageDeployName.toLowerCase()}", message: "Deploy to ${stageDeployName}?", ok: 'Approve', submitterParameter: 'approved_by')
+                GitHubHelper.getPullRequest(this).comment("User '${inputResponse['approved_by']}' has approved deployment to '${stageDeployName}'")
             }
         }
 
