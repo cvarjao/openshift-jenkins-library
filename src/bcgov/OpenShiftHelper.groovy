@@ -6,6 +6,7 @@ import com.openshift.jenkins.plugins.OpenShiftDSL;
 class OpenShiftHelper {
     int logLevel=0
     static List PROTECTED_TYPES = ['Secret', 'ConfigMap', 'PersistentVolumeClaim']
+    static String ANNOTATION_AS_COPY_OF ='as-copy-of'
     static String ANNOTATION_ROUTE_TLS_SECRET_NAME='template.openshift.io.bcgov/tls-secret-name'
     static String ANNOTATION_ALLOW_CREATE='template.openshift.io.bcgov/create'
     static String ANNOTATION_ALLOW_UPDATE='template.openshift.io.bcgov/update'
@@ -29,21 +30,18 @@ class OpenShiftHelper {
         metadata.buildNameSuffix = "-${metadata.buildEnvName}"
     }
 
+    private boolean allowCreate(Map newModel) {
+        return !PROTECTED_TYPES.contains(newModel.kind) || Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_CREATE]?:'false')==true
+    }
+
+    private boolean allowUpdate(Map newModel) {
+        return !PROTECTED_TYPES.contains(newModel.kind) || Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_UPDATE]?:'false')==true
+    }
 
     private boolean allowCreateOrUpdate(Map newModel, Map currentModel) {
-
-        if(PROTECTED_TYPES.contains(newModel.kind)){
-            if (
-            (currentModel==null && Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_CREATE]?:'false')==true) ||
-                    (currentModel!=null && Boolean.parseBoolean(newModel.metadata?.annotations[ANNOTATION_ALLOW_UPDATE]?:'false')==true)
-            ){
-                return true
-            }
-        }else {
-            return true
-        }
-        return false
+        return (currentModel==null && allowCreate(newModel)) || (currentModel!=null  && allowUpdate(newModel))
     }
+
     @NonCPS
     private static String toJsonString(Object object) {
         return groovy.json.JsonOutput.toJson(object)
@@ -594,13 +592,23 @@ class OpenShiftHelper {
                         Map models = loadObjectsFromTemplate(openshift, context.templates.deployment, context, 'deployment')
 
                         for (Map m : models.values()) {
+                            Map annotations=m?.metadata?.annotations?:[:]
+
                             if ("Route".equalsIgnoreCase(m.kind)) {
-                                String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+".${envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
+                                String secretName=(annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+".${envKeyName}"])?:(annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
 
                                 if (secretName!=null) {
                                     def selector = openshift.selector("secrets/${secretName}")
                                     if (selector.count() == 0) {
                                         errors.add("Missing 'secret/${secretName}'")
+                                    }
+                                }
+                            }else if ("Secret".equalsIgnoreCase(m.kind)) {
+                                String sourceName=(annotations[ANNOTATION_AS_COPY_OF+".${envKeyName}"])?:(annotations[ANNOTATION_AS_COPY_OF])
+                                if (sourceName!=null){
+                                    def selector = openshift.selector("secrets/${sourceName}")
+                                    if (selector.count() == 0) {
+                                        errors.add("Missing 'secret/${sourceName}'")
                                     }
                                 }
                             }
@@ -817,8 +825,9 @@ class OpenShiftHelper {
         script.echo "Applying Configurations"
         upserts.clear()
         for (Map m : models.values()) {
+            Map annotations=m?.metadata?.annotations?:[:]
             if ("Route".equalsIgnoreCase(m.kind)) {
-                String secretName=(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+".${deployCtx.envKeyName}"])?:(m?.metadata?.annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
+                String secretName=(annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME+".${deployCtx.envKeyName}"])?:(annotations[ANNOTATION_ROUTE_TLS_SECRET_NAME])
                 if (secretName!=null){
                     script.echo "Applying TLS using secret/${secretName} for '${key(m)}'"
                     m.spec.tls = m.spec.tls?:[:]
@@ -834,9 +843,19 @@ class OpenShiftHelper {
 
                 replaces.add(m)
             }else{
-                Map current = initDeploymemtConfigStatus[key(m)]
-                if (allowCreateOrUpdate(m, current)) {
-                    upserts.add(m)
+                String sourceName=(annotations[ANNOTATION_AS_COPY_OF+".${deployCtx.envKeyName}"])?:(annotations[ANNOTATION_AS_COPY_OF])
+                if (sourceName!=null && sourceName.length()>0) {
+                    def selector = openshift.selector("secrets/${sourceName}")
+                    if (selector.count() == 1) {
+                        Map sourceModel=selector.object(exportable:true);
+                        sourceModel.metadata.name=m.metadata.name
+                        upserts.add(sourceModel)
+                    }
+                }else {
+                    Map current = initDeploymemtConfigStatus[key(m)]
+                    if (allowCreateOrUpdate(m, current)) {
+                        upserts.add(m)
+                    }
                 }
             }
         }
